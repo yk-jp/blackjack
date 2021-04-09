@@ -1,0 +1,14 @@
+{
+  "name": "blackjack",
+  "version": "1.0.0",
+  "description": "this is a project5 to learn MVC in Recursion.",
+  "main": "app.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "yusuke",
+  "license": "ISC",
+  "dependencies": {
+    "nodemon": "^2.0.7"
+  }
+}
