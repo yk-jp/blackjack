@@ -27,7 +27,6 @@ class Card {
       // 仮の値
       return 11;
     }
-  
     return parseInt(this.rank);
   }
 }

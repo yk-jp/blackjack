@@ -4,7 +4,7 @@ class Deck {
   /*
      String gameType : ゲームタイプの指定。{'blackjack'}から選択。
   */
-  constructor(gameType) {
+  constructor(gameType = null) {
     // このデッキが扱うゲームタイプ
     this.gameType = gameType;
 
@@ -35,7 +35,7 @@ class Deck {
      String gameType : どのゲームにリセットするか
      return null : このメソッドは、デッキの状態を更新します。
   */
-  resetDeck(gameType) {
+  resetDeck(gameType = null) {
     this.cards = [];
     for (let i = 0; i < Card.suit.length; i++) {
       for (let j = 0; j < Card.rank.length; j++) {
