@@ -1,11 +1,16 @@
 const Card = require('./models/card'); 
 const Deck = require('./models/deck'); 
 const Player = require('./models/player');
+const Table = require('./models/table');
+
+
 let deck = new Deck();
 let player = new Player();
-// create card
-// console.log(deck.cards); 
 
-// totalScore 
-console.log(player.getHandScore());
+let table = new Table('blackjack');
+
+// game start 
+
+// step1 bet
+ 
 

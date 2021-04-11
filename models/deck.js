@@ -42,7 +42,6 @@ class Deck {
         this.cards.push(new Card(Card.suit[i], Card.rank[j]));
       }
     }
-    
     this.shuffle();
   }
 
