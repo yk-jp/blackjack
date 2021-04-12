@@ -11,28 +11,31 @@ class Table {
   */
 
   turnCounter = 1;
-  gamePhase = "betting"; //  {'betting', 'acting', 'evaluatingWinners, gameOver'}
+  gamePhase = "betting"; //  {'betting', 'acting', 'evaluatingWinners, roundOver'}
 
   constructor(gameType, betDenominations = [5, 20, 50, 100]) {
-    // ゲームタイプを表します。
+    // gameType
     this.gameType = gameType;
 
     // プレイヤーが選択できるベットの単位。
     this.betDenominations = betDenominations;
 
-    // テーブルのカードのデッキ
+    // deck
     this.deck = new Deck(this.gameType);
 
     // プレイしているゲームに応じて、プレイヤー、gamePhases、ハウスの表現が異なるかもしれません。
     // 今回はとりあえず3人のAIプレイヤーとハウス、「betting」フェースの始まりにコミットしましょう。
     this.players = [];
 
-    // プレイヤーをここで初期化してください。
+    // user 
+    // this.players.push(new Player(`user`, 'user', this.gameType));
+
+    // ai 
     this.playerNumber = 3;
     for (let i = 0; i < this.playerNumber; i++) {
       this.players.push(new Player(`ai${i + 1}`, 'ai', this.gameType));
     }
-
+    // house
     this.house = new Player('house', 'house', this.gameType);
 
     this.players.push(this.house);
@@ -51,7 +54,6 @@ class Table {
       プレイヤーが「ヒット」し、手札が21以上の場合、gameStatusを「バスト」に設定し、チップからベットを引きます。
   */
   evaluateMove(player) {
-    //TODO: ここから挙動をコードしてください。
     let gameDecision = player.promptPlayer();
     player.gameStatus = gemeDecision.action;
     player.bet = gameDecision.amount;
@@ -62,14 +64,12 @@ class Table {
       NOTE: このメソッドの出力は、各ラウンドの終了時にテーブルのresultsLogメンバを更新するために使用されます。
   */
   blackjackEvaluateAndGetRoundResults() {
-    //TODO: ここから挙動をコードしてください。
     let log = `round : ${this.resultsLog.length + 1}`;
     this.players.forEach(player => {
       log += `
               ${player.name}: action: ${player.gameStatus}, bet: ${player.bet}, won:${player.winAmount}
              `;
     });
-
     this.resultsLog.push(log);
     return log;
   }
@@ -100,8 +100,9 @@ class Table {
      return Player : 現在のプレイヤー
   */
   getTurnPlayer() {
-    //TODO: ここから挙動をコードしてください。
     let index = (turnCounter - 1) % this.playerNumber;
+    // 次のplayerのturn　→　turnCount++;
+    this.turnCounter++;
     return this.players[index];
   }
 
@@ -110,10 +111,28 @@ class Table {
      return Null : このメソッドはテーブルの状態を更新するだけで、値を返しません。
   */
   haveTurn(userData) {
-    //TODO: ここから挙動をコードしてください。
-    let currGamePhase = this.gamePhase;
-    let currTurnPlayer = this.getTurnPlayer();
+    // blackjackのルール適用
+    if (this.gameType == "blackjack") {
+      // 現在のプレイヤー
+      let currPlayer = getTurnPlayer();
+      
+      // 
+      if(this.gamePhase == "betting") { 
+        // step1 全playerがベット(houese除く)
+        this.players.forEach(player => { 
+          // 
+        });
 
+
+      } else if(this.GamePhase == "") { 
+
+      }
+
+    }
+    //　else if (this.gameType == "poker") { 
+    //   pokerに拡張用　今回は実装しない
+
+    // }
   }
 
   /*

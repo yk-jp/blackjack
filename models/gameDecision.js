@@ -2,16 +2,16 @@ class GameDecision {
   /*
      String action : プレイヤーのアクションの選択。（ブラックジャックでは、hit、standなど。）
      Player.statusと同じ。　→　{"betting", "bet", "surrender", "stand", "hit", "double", "blackjack", "bust", "broke"}
-     Number amount : プレイヤーが選択する数値。
+     Number bet : betする値。初回のみのため、nullをdefault
 
      これはPlayer.promptPlayer()は常にreturnする、標準化されたフォーマットです。
   */
-  constructor(action, amount) {
+  constructor(action, bet = null) {
     // アクション
     this.action = action;
 
-    // プレイヤーが選択する数値
-    this.amount = amount
+    // bet 
+    this.bet = bet;
   }
 }
 
