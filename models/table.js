@@ -9,7 +9,7 @@ const House = require('./_player/house');
 
   変数
    turnCounter : Number → player配列へのアクセス用。剰余計算でアクセス。一巡したら1に更新。
-    gameStatus : gameFlowの管理　→　{'betting', 'acting', 'evaluatingWinners, roundOver'}
+    gameStatus : gameFlowの管理　→　{'bet', 'playing', 'evaluatingWinners, roundOver'}
     betDenominations : userがかけられるチップの単位　aiの場合使用しない
     resultLog : roundごとの結果を格納
     playerNumber : playerの数を設定　ai = 3に設定　
@@ -20,7 +20,7 @@ const House = require('./_player/house');
    1.bet (gameStatus　→　betting)
     最初のplayerから全員betする →　getTurnPlayer()でactionするplayer呼び出し
    2.cardを2枚配る。(playerがbrokeしていない) →　blackjackAssignPlayerHands()
-   3. 
+   3.action →　prompt()でplayerStatus更新
      
 
   
@@ -80,7 +80,7 @@ class Table {
   evaluateMove(player) {
     let gameDecision = player.promptPlayer();
     player.gameStatus = gemeDecision.action;
-    player.bet = gameDecision.amount;
+    player.bet = gameDecision.bet;
   }
 
   /*
@@ -113,7 +113,7 @@ class Table {
   }
 
   /*
-     return null : テーブル内のすべてのプレイヤーの状態を更新し、手札を空の配列に、ベットを0に設定します。
+     return null : テーブル内のすべてのプレイヤーの状態を更新し、手札を空の配列に、ベットを0に設定します。 
   */
   blackjackClearPlayerHandsAndBets() {
     this.players.forEach(player => {
@@ -140,15 +140,20 @@ class Table {
     // blackjackのルール適用
     if (this.gameType == "blackjack") {
       if (this.gameStatus == "bet") {
-        // step1 cardを配る
-        this.players.forEach(player => {
-          if (player.playerStatus != "broke") {
-            currPlayer.hand = this.blackjackAssignPlayerHands();
+        // step1 betする house以外
+        while (!this.onLastPlayer()) {
+          let turnPlayer = this.getTurnPlayer();
+          if (turnPlayer.Status != "broke") {
+            // player更新
+            this.evaluateMove();
           }
-        // step2 betする
-        
-        // statusをbet → playing
-        currPlayer.Status = "playing";
+        }
+        // step2 cardを配る
+        this.players.forEach(player => {
+          if (player.playerStatus != "broke") currPlayer.hand = this.blackjackAssignPlayerHands();
+
+          // statusをbet → playing
+          currPlayer.Status = "playing";
         });
       } else if (this.gameStatus == "playing") {
 
@@ -158,6 +163,7 @@ class Table {
 
   /*
       return Boolean : テーブルがプレイヤー配列の最初のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
+      // betをリセットするとき使用
   */
   onFirstPlayer() {
     return this.players[0] == this.getTurnPlayer();
