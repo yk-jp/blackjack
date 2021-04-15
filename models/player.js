@@ -5,8 +5,8 @@ class Player {
   /*
       String name : プレイヤーの名前
       String gameType : {'blackjack'}から選択。プレイヤーの初期化方法を決定するために使用されます。
-     
-      gameStatus: プレイヤーの状態やアクションを表す文字列。{"bet", "surrender", "stand", "hit", "double", "blackjack", "bust", "broke"}
+    
+      boolean judgeByRatio(ratio) : 引数により確率を操作する。 　高確率　 →　true　 低確率　　→　false　　(e.g 7:3 →　posibility(7,3) →　true : false)
   */
   constructor(name, gameType) {
     // プレイヤーの名前
@@ -15,13 +15,21 @@ class Player {
     // 現在のゲームタイプ
     this.gameType = gameType;
 
+    this.bet = 0;
+
     // プレイヤーの手札
     this.hand = [];
 
     // playerの状態
     this.playerStatus = "bet";
+
+    // playerのaction
+    this.playerAction = "bet";
   }
-  
+
+  // 各継承先クラスで実装
+  prompt() { }
+
   /*
      return Number : 手札の合計
 
@@ -43,6 +51,14 @@ class Player {
       }
     }
     return totalScore;
+  }
+
+  judgeByRatio(ratio) {
+    const random = Math.floor(Math.random() * 10) + 1;　//1～10
+    if (random <= ratio) {
+      return true;
+    }
+    return false;
   }
 }
 

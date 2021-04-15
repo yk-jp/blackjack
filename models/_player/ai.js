@@ -7,18 +7,16 @@ const GameDecision = require('../gameDecision');
     gameType(blackjack)
     hand : 手札
     void getHandScore() : Number →　playerの手札の点数を返す。
+    bet :　roundごとにいくらかけるか
 
   AIに必要な変数、メソッド
     chip(default = 400)　:　所持金
-    bet :　roundごとにいくらかけるか
     winAmount : 勝利したときの金額
     playerStatus : 現在のplayerのstatus　→ {bet,playing,broke}
     } 
     playerAction : 現在のplayerのaction  →　{bet,stand, hit, double,surrender}
     gameStatus : blackjackのはじめはbetting　{betting,playing, roundOver, gameOver(userがbustしたとき)}  →　tableクラスのみ所持していればよいのかも知れない 
     gameDecision prompt(): GameDecisionクラスを返す　自動的に判断するような設計が必須 　　※player classの更新はしない(tableクラス　evaluateMove()で更新)
-
-    boolean judgeByRatio(ratio) : 引数により確率を操作する。 　高確率　 →　true　 低確率　　→　false　　(e.g 7:3 →　posibility(7,3) →　true : false)
 */
 
 /* prompt()の処理
@@ -52,9 +50,8 @@ class AI extends Player {
   constructor() {
     super();
     this.chip = 400;
-    this.bet = 0;
     this.winAmount = 0;
-    this.playerAction = null;
+    this.playerAction = "bet";
   }
 
   /* return GameDecision class (action,bet)
@@ -63,19 +60,20 @@ class AI extends Player {
 
   */
   prompt() {
-    let promptBet = null;
-    let promptAction = null;
     if (this.playerStatus == "bet") {
-      promptAction = "bet";
+      let promptBet = null;
       // 1.bet
       if (this.chip > 400) promptBet = this.judgeByRatio(5) ? 100 : 200;
       else if (150 < this.chip && this.chip <= 400) promptBet = this.judgeByRatio(8) ? 50 : 100;
       else promptBet = this.judgeByRatio(7) ? Math.floor(this.chip / 2) : this.chip;
+
+      return new GameDecision("bet", promptBet);
+
     } else if (this.playerStatus == "playing") {
       // 2.playingの時
       let numOfHand = this.hand.length;
       let handScore = this.getHandScore();
-      if (handScore < 17) {
+      if (handScore < 16) {
         if (handScore < 13) promptAction = "hit";
         else if (13 <= handScore) promptAction = this.judgeByRatio(9) ? "hit" : !numOfHand == 2 ? "hit" : "double"; //手札が2枚のみdoubleが可能
       }
@@ -93,19 +91,11 @@ class AI extends Player {
       else if (18 <= handScore && handScore <= 20) {
         // 9:1 →　stand : hit
         promptAction = this.judgeByRatio(9) ? "stand" : "hit";
-      } else if (handScore == 21) promptAction = "blackjack";
+      } else if (handScore == 21) promptAction = "stand";
       else promptAction = "bust";
-    }
 
-    return new GameDecision(promptAction, promptBet);
-  }
-
-  judgeByRatio(ratio) {
-    const random = Math.floor(Math.random() * 10) + 1;　//1～10
-    if (random <= ratio) {
-      return true;
+      return new GameDecision(promptAction, this.bet);
     }
-    return false;
   }
 }
 
