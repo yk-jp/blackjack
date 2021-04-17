@@ -37,10 +37,9 @@ const GameDecision = require('../gameDecision');
 */
 
 class House extends Player {
-  constructor() {
-    super();
-    this.bet = null; //houseは、betしない
-    this.playerAction = "waiting";
+  constructor(name, gameType) {
+    super(name, gameType);
+    this.playerStatus = "waiting";
   }
 
   /* return GameDecision class (action,bet)
@@ -49,17 +48,17 @@ class House extends Player {
 
   */
   prompt() {
-    if (this.playerStatus = "waiting") return new GameDecision("playing");
-    else if (this.playerStatus = "playing") {
+    if (this.playerStatus == "waiting") return new GameDecision("playing");
+    else if (this.playerStatus == "playing") {
       let promptAction = null;
       let handScore = this.getHandScore();
       if (handScore < 17) promptAction = "hit";
-      else if (handScore == 17) promptAction = judgeByRatio(7) ? "stand" : "hit";
+      else if (handScore == 17) promptAction = this.judgeByRatio(7) ? "stand" : "hit";
       else if (18 <= handScore && handScore <= 20) promptAction = this.judgeByRatio(9) ? "stand" : "hit";
       else if (handScore == 21) promptAction = "stand";
-      else promptAction = "bust";
+      else if (handScore > 21) promptAction = "bust";
 
-      return new GameDecision(action);
+      return new GameDecision(promptAction);
     }
   }
 }

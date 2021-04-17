@@ -1,6 +1,4 @@
-const Card = require('./card');
 const Deck = require('./deck');
-const GameDecision = require('./gameDecision');
 const AI = require('./_player/ai');
 const House = require('./_player/house');
 
@@ -9,7 +7,7 @@ const House = require('./_player/house');
 
   変数
    turnCounter : Number → player配列へのアクセス用。剰余計算でアクセス。一巡したら1に更新。
-    gameStatus : gameFlowの管理　→　{'betting', 'playing', 'evaluatingWinners, roundOver'}
+    gameStatus : gameFlowの管理　→　{'betting', 'playing', 'evaluatingWinners', 'roundOver'}
     betDenominations : userがかけられるチップの単位　aiの場合使用しない
     resultLog : roundごとの結果を格納
     playerNumber : playerの数を設定　ai = 3に設定　
@@ -56,13 +54,15 @@ class Table {
       this.players.push(new AI(`ai${i + 1}`, this.gameType));
     }
     // house
-    this.house = new HOUSE('house', this.gameType);
+    this.house = new House('house', this.gameType);
 
     this.players.push(this.house);
 
     this.playerNumber = this.players.length;
 
     this.gameStatus = 'betting';
+
+    this.players[2].playerStatus = "broke";
 
     // 各ラウンドの結果をログに記録する
     this.resultsLog = [];
@@ -75,8 +75,8 @@ class Table {
       プレイヤーが「ヒット」し、手札が21以上の場合、gameStatusを「バスト」に設定し、チップからベットを引きます。
   */
   evaluateMove(player) {
-    let gameDecision = player.promptPlayer();
-    player.playerAction = gemeDecision.action;
+    let gameDecision = player.prompt();
+    player.playerAction = gameDecision.action;
     player.bet = gameDecision.bet;
   }
 
@@ -85,13 +85,54 @@ class Table {
       NOTE: このメソッドの出力は、各ラウンドの終了時にテーブルのresultsLogメンバを更新するために使用されます。
   */
   blackjackEvaluateAndGetRoundResults() {
+    // houseとplayerの比較
+    let i = 0;
+    let houseHand = this.house.getHandScore();
+    while (this.players[i] != this.house) {
+      let playerHand = this.players[i].getHandScore();
+      // playerがbustしたとき
+      if (this.players[i].playerAction == "bust") this.players[i].chip -= this.players[i].bet;
+      // playerがsurrender
+      else if (this.players[i].playerAction == "surrender") this.players[i].chip -= Math.floor(this.players[i].bet / 2);
+      else {
+        // houseと勝負
+        if (this.house.playerAction == "bust") {
+          this.players.chip += this.players[i].blackjack() ? Math.floor(this.players[i].bet * 1.5) : (this.players[i].playerAction == "double") ? this.players[i].bet * 2 : this.players[i].bet; // player　win
+        }
+        else {
+          // house.playerAction != bust
+          if (this.house.blackjackAndHasAce()) {
+            // house がblackjackかつ "A"をもつ   playerもblackjackかつ "A"をもつ 　→　引き分け
+            if (!this.players[i].blackjackAndHasAce()) this.players[i].chip -= (this.players[i].playerAction == "double") ? this.players[i].bet * 2 : this.players[i].bet; // playerの負け    
+          } else if (this.house.blackjack()) {
+            // houseがblackjack //playerもblackjack →　引き分け
+            if (this.players[i].blackjackAndHasAce()) this.players.chip += (this.players[i].playerAction == "double") ? this.players[i].bet * 2 : this.players[i].bet;//playerの勝ち 
+            else if (!this.players[i].blackjack()) this.players[i].chip -= (this.players[i].playerAction == "double") ? this.players[i].bet * 2 : this.players[i].bet; // playerの負け
+          } else {
+            // houseがblackjackでない
+            if (playerHand < houseHand) this.players[i].chip -= (this.players[i].playerAction == "double") ? this.players[i].bet * 2 : this.players[i].bet; // playerの負け
+            else if (playerHand > houseHand) this.players[i].chip += (this.players[i].playerAction == "double") ? this.players[i].bet * 2 : this.players[i].bet; // playerの勝ち
+            else continue; //引き分け
+          }
+        }
+        if (this.players[i].chip <= 0) this.players[i].gameStatus = "broke";
+      }
+      i++;
+    }
+    // round終了
     let log = `round : ${this.resultsLog.length + 1}`;
     this.players.forEach(player => {
-      log += `
-              ${player.name}: action: ${player.gameStatus}, bet: ${player.bet}, won:${player.winAmount}
-             `;
+      if (player != this.house && player.playerStatus != "broke") {
+        log += ` ◇${player.name}: action:${player.playerAction}, bet:${player.bet}, won:${player.winAmount}
+       
+       `;
+      }
     });
     this.resultsLog.push(log);
+
+    // gameStatusの更新
+    this.gameStatus = "roundOver";
+
     return log;
   }
 
@@ -101,10 +142,12 @@ class Table {
   */
   blackjackAssignPlayerHands() {
     this.players.forEach(player => {
-      if (player instanceof House) {
-        player.hand.push(this.deck.drawOne());
-      } else {
-        player.hand.push(this.deck.drawOne(), this.deck.drawOne());
+      if (player.playerStatus != "broke") {
+        if (player instanceof House) {
+          player.hand.push(this.deck.drawOne());
+        } else {
+          player.hand.push(this.deck.drawOne(), this.deck.drawOne());
+        }
       }
     });
   }
@@ -115,15 +158,26 @@ class Table {
   blackjackClearPlayerHandsAndBets() {
     this.players.forEach(player => {
       player.hand = [];
-      if (!player instanceof House) player.bet = 0;
+      player.bet = 0;
+      if (player.playerStatus != "broke") {
+        player.playerStatus = "bet";
+        player.playerAction = "bet";
+      }
+      if (player instanceof House) {
+        player.bet = -1;
+        player.playerStatus = "waiting";
+        player.playerAction = "waiting";
+      }
     });
-
+    // cardをリセット
+    this.deck.resetDeck();
+    this.turnCounter = 1;
   }
   /*
      return Player : 現在のプレイヤー
   */
   getTurnPlayer() {
-    let index = (turnCounter - 1) % this.playerNumber;
+    let index = (this.turnCounter - 1) % this.playerNumber;
     return this.players[index];
   }
 
@@ -135,32 +189,45 @@ class Table {
     // blackjackのルール適用
     if (this.gameType == "blackjack") {
       if (this.gameStatus == "betting") {
-        // step1 betする player.status != broke && house以外(house.bet = null)
+        // step1 cardを配る
+        this.blackjackAssignPlayerHands();
+
+        // step2 betする player.status != broke && house以外(house.bet = null)
         this.players.forEach(player => {
-          if (player.Status != "broke") {
-            // player更新
+          if (player.playerStatus != "broke") {
+            // player bet
             this.evaluateMove(player);
-            // step2 cardを配る
-            player.hand = this.blackjackAssignPlayerHands();
             // statusをbet → playing
-            player.Status = "playing";
+            player.playerStatus = "playing";
           }
         });
+
+        // gameStatus更新
+        this.gameStatus = "playing";
       } else if (this.gameStatus == "playing") {
-        while (!this.onLastPlayer() && !this.allPlayerActionsResolved(this.getTurnPlayer())) {
+
+        while (!this.onLastPlayer()) {
           // houseは、playerのstatusが確定するまで実施しない。
-          this.evaluateMove(this.getTurnPlayer());
-          // カードをdraw、手札に加える
-          this.getTurnPlayer().hand.push(this.deck.drawOne());
+          let currPlayer = this.getTurnPlayer();
+          this.evaluateMove(currPlayer);
+          while (!this.playerActionsResolved(currPlayer)) {
+            this.evaluateMove(currPlayer);
+            // カードをdraw、手札に加える
+            this.getTurnPlayer().hand.push(this.deck.drawOne());
+          }
           // 次のplayerへ
           this.turnCounter++;
         }
         // houseのstatus更新
-        this.turnCounter = this.players.length;
-        while (!this.allPlayerActionsResolved()) {
-          this.getTurnPlayer().hand.push(this.deck.drawOne());
-          this.evaluateMove(this.getTurnPlayer());
+        this.evaluateMove(this.house);
+        while (!this.playerActionsResolved()) {
+          this.house.hand.push(this.deck.drawOne());
+          this.evaluateMove(this.house);
         }
+        this.gameStatus = "evaluatingWinners";
+        this.blackjackEvaluateAndGetRoundResults();
+        // reset
+        this.blackjackClearPlayerHandsAndBets();
       }
     }
   }
@@ -177,7 +244,7 @@ class Table {
       return Boolean : テーブルがプレイヤー配列の最後のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
   */
   onLastPlayer() {
-    return this.players[this.players.length - 1] == this.getTurnPlayer();
+    return this.players[this.playerNumber - 1] == this.getTurnPlayer();
   }
 
   /*
@@ -186,22 +253,22 @@ class Table {
       //player != null →　特定のplayer対象
   */
   playerActionsResolved(player = null) {
-    const gameStatus =
+    const playerActionMap =
     {
       "broke": "broke",
       "bust": "bust",
       "stand": "stand",
       "surrender": "surrender"
     };
-    let hasStatus = true;
+    let hasAction = true;
     if (player == null) {
       this.players.forEach(player => {
-        if (!gameStatus.containsKey(player.Status)) hashStatus = false;
+        if (!(player.playerAction in playerActionMap)) hasAction = false;
       });
     } else {
-      if (!gameStatus.containsKey(player.Status)) hashStatus = false;
+      if (!(player.playerAction in playerActionMap)) hasAction = false;
     }
-    return hasStatus;
+    return hasAction;
   }
 }
 

@@ -47,8 +47,9 @@ const GameDecision = require('../gameDecision');
 */
 
 class AI extends Player {
-  constructor() {
-    super();
+  constructor(name, gameType) {
+    super(name, gameType);
+    this.bet = 0;
     this.chip = 400;
     this.winAmount = 0;
     this.playerAction = "bet";
@@ -70,6 +71,7 @@ class AI extends Player {
       return new GameDecision("bet", promptBet);
 
     } else if (this.playerStatus == "playing") {
+      let promptAction = null;
       // 2.playingの時
       let numOfHand = this.hand.length;
       let handScore = this.getHandScore();
@@ -79,11 +81,11 @@ class AI extends Player {
       }
       else if (handScore == 16 || handScore == 17) {
         // 3:4:3 = hit : stand : surrender 
-        if (judgeByRatio(7)) {
+        if (this.judgeByRatio(7)) {
           // 1回目7:3 →　hit or stand : surrender
           promptAction = "hit";
           // 2回目 hit or stand
-          if (judgeByRatio(4)) promptAction = "stand";
+          if (this.judgeByRatio(4)) promptAction = "stand";
         } else {
           promptAction = "surrender";
         }

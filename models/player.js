@@ -15,8 +15,6 @@ class Player {
     // 現在のゲームタイプ
     this.gameType = gameType;
 
-    this.bet = 0;
-
     // プレイヤーの手札
     this.hand = [];
 
@@ -53,6 +51,23 @@ class Player {
     return totalScore;
   }
 
+  // blackjackかどうか
+  blackjack() {
+    return this.getHandScore() == 21;
+  }
+
+  blackjackAndHasAce() {
+    let scoreIsBlackJack = this.blackjack();
+    if (scoreIsBlackJack) {
+      let i = 0;
+      while (i < this.hand.length) {
+        if (this.hand[i].rank == "A") return true;
+        i++;
+      }
+    }
+    return false;
+  }
+
   judgeByRatio(ratio) {
     const random = Math.floor(Math.random() * 10) + 1;　//1～10
     if (random <= ratio) {
@@ -60,6 +75,9 @@ class Player {
     }
     return false;
   }
+
+
+
 }
 
 module.exports = Player;
