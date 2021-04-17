@@ -11,17 +11,11 @@ class Deck {
     // カードの配列
     this.cards = [];
 
-    // ゲームタイプによって、カードを初期化してください。
+    // ゲームタイプによって、カードを初期化
     this.resetDeck(this.gameType);
   }
 
-  /*
-     return null : このメソッドは、デッキの状態を更新します。
-
-     カードがランダムな順番になるようにデッキをシャッフルします。
-  */
   shuffle() {
-    //TODO: ここから挙動をコードしてください。
     // Math.random() * (max - min) + minでmin-max未満のランダムな数を生成することができます。
     for (let i = 0; i < this.cards.length; i++) {
       let randomNum = Math.floor(Math.random() * (this.cards.length - i));
@@ -45,12 +39,7 @@ class Deck {
     this.shuffle();
   }
 
-  /*
-     return Card : ポップされたカードを返します。
-     カード配列から先頭のカード要素をポップして返します。
-  */
   drawOne() {
-    //TODO: code behavior here
     return this.cards.pop();
   }
 }

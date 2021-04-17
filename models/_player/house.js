@@ -7,10 +7,10 @@ const GameDecision = require('../gameDecision');
     gameType(blackjack)
     hand : 手札
     void getHandScore() : Number →　playerの手札の点数を返す。
-    bet : houseにnullを代入
+    bet : houseに-1を代入
 
   houseに必要な変数、メソッド
-    playerStatus : 現在のplayerのstatus　→ {waiting,playing}
+    status : 現在のplayerのstatus　→ {waiting,playing}
     } 
     playerAction : 現在のplayerのaction  →　{waiting,stand,hit} bet,surrender,doubleしない。 
     gameDecision prompt(): GameDecisionクラスを返す　自動的に判断するような設計が必須  ※player classの更新はしない(tableクラス　evaluateMove()で更新)
@@ -22,10 +22,10 @@ const GameDecision = require('../gameDecision');
 
      2.playing(1の後の処理)　 ※houseは、17以上になるまでカードを引き続けることを考慮。17<=scoreでstandできる
 
-   1.playerStatus = waiting
+   1.status = waiting
      playerAction = waiting、bet=nullgameDecisionクラスを返す ※ GameDecisionクラスで、betはdefault = null
 
-   2. playerStatus = playing aiと同様に、中々bustしないhouseを作成する。※houseは、17以上になるまでカードを引き続けることを考慮。 　
+   2. status = playing aiと同様に、中々bustしないhouseを作成する。※houseは、17以上になるまでカードを引き続けることを考慮。 　
     　
       手札(hand)
       hand: bustを避ける動きを作る。
@@ -37,19 +37,24 @@ const GameDecision = require('../gameDecision');
 */
 
 class House extends Player {
+
+  static statusForBlackjack = {
+    "waiting": "playing",
+    "playing": "waiting"
+  };
+
   constructor(name, gameType) {
     super(name, gameType);
-    this.playerStatus = "waiting";
+    this.status = "waiting";
   }
 
   /* return GameDecision class (action,bet)
-     playerStatus=waiting -> return (action("waiting"))
-     playerStatus=playing -> return (action)
-
+     status=waiting -> return (action("waiting"))
+     status=playing -> return (action)
   */
   prompt() {
-    if (this.playerStatus == "waiting") return new GameDecision("playing");
-    else if (this.playerStatus == "playing") {
+    if (this.status == "waiting") return new GameDecision("playing");
+    else if (this.status == "playing") {
       let promptAction = null;
       let handScore = this.getHandScore();
       if (handScore < 17) promptAction = "hit";
@@ -60,6 +65,10 @@ class House extends Player {
 
       return new GameDecision(promptAction);
     }
+  }
+
+  switchStatus(gameType) {
+    if (gameType == "blackjack") this.status = House.statusForBlackjack[this.status];
   }
 }
 

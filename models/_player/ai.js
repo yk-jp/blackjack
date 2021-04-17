@@ -12,9 +12,9 @@ const GameDecision = require('../gameDecision');
   AIに必要な変数、メソッド
     chip(default = 400)　:　所持金
     winAmount : 勝利したときの金額
-    playerStatus : 現在のplayerのstatus　→ {bet,playing,broke}
+    status : 現在のplayerのstatus　→ {bet,playing,broke}
     } 
-    playerAction : 現在のplayerのaction  →　{bet,stand, hit, double,surrender}
+    action : 現在のplayerのaction  →　{bet,stand,hit,double,surrender,broke}
     gameStatus : blackjackのはじめはbetting　{betting,playing, roundOver, gameOver(userがbustしたとき)}  →　tableクラスのみ所持していればよいのかも知れない 
     gameDecision prompt(): GameDecisionクラスを返す　自動的に判断するような設計が必須 　　※player classの更新はしない(tableクラス　evaluateMove()で更新)
 */
@@ -24,13 +24,13 @@ const GameDecision = require('../gameDecision');
      1.bet
      2.playing(betした後の処理)
    
-   1.playerStatus = bet
+   1.status = bet
      
      chip > 400  →　bet = 5:5 = 100 : 200 
      chip <= 400(default) →　bet = 8:2 = 50 : 100
      chip <= 150 = 7:3 = chip/2 : all chips
 
-   2. playerStatus = playing aiは、playing状態 userのように慎重な(中々bustしない or brokeしない)aiを作成する。 　
+   2. status = playing aiは、playing状態 userのように慎重な(中々bustしない or brokeしない)aiを作成する。 　
     　
    判断 → chip , 手札(hand)
      
@@ -47,36 +47,41 @@ const GameDecision = require('../gameDecision');
 */
 
 class AI extends Player {
+  static statusForBlackjack = {
+    "bet": "playing",
+    "playing": "bet",
+    "broke": "broke"
+  };
+
   constructor(name, gameType) {
     super(name, gameType);
     this.bet = 0;
     this.chip = 400;
     this.winAmount = 0;
-    this.playerAction = "bet";
+    this.action = "bet";
   }
 
   /* return GameDecision class (action,bet)
-     playerStatus=bet -> return (action("bet"),bet)
-     playerStatus=playing -> return (action,null)
-
+     status=bet → return (action("bet"),bet)
+     status=playing →　return (action,null)
+     satatus = broke →　return (bust)
   */
   prompt() {
-    if (this.playerStatus == "bet") {
+    if (this.status == "bet") {
       let promptBet = null;
       // 1.bet
       if (this.chip > 400) promptBet = this.judgeByRatio(5) ? 100 : 200;
       else if (150 < this.chip && this.chip <= 400) promptBet = this.judgeByRatio(8) ? 50 : 100;
       else promptBet = this.judgeByRatio(7) ? Math.floor(this.chip / 2) : this.chip;
-
       return new GameDecision("bet", promptBet);
 
-    } else if (this.playerStatus == "playing") {
+    } else if (this.status == "playing") {
       let promptAction = null;
       // 2.playingの時
       let numOfHand = this.hand.length;
       let handScore = this.getHandScore();
       if (handScore < 16) {
-        if (handScore < 13) promptAction = "hit";
+        if (0<= handScore && handScore < 13) promptAction = "hit";
         else if (13 <= handScore) promptAction = this.judgeByRatio(9) ? "hit" : !numOfHand == 2 ? "hit" : "double"; //手札が2枚のみdoubleが可能
       }
       else if (handScore == 16 || handScore == 17) {
@@ -89,14 +94,21 @@ class AI extends Player {
         } else {
           promptAction = "surrender";
         }
-      }
-      else if (18 <= handScore && handScore <= 20) {
+      } else if (18 <= handScore && handScore <= 20) {
         // 9:1 →　stand : hit
         promptAction = this.judgeByRatio(9) ? "stand" : "hit";
       } else if (handScore == 21) promptAction = "stand";
       else promptAction = "bust";
 
       return new GameDecision(promptAction, this.bet);
+    }
+    return new GameDecision("broke", 0);
+  }
+
+  switchStatus(gameType) {
+    if (gameType == "blackjack") {
+      if (this.chip <= 0) this.status = AI.statusForBlackjack["broke"];
+      else this.status = AI.statusForBlackjack[this.status];
     }
   }
 }

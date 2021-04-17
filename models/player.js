@@ -5,9 +5,9 @@ class Player {
   /*
       String name : プレイヤーの名前
       String gameType : {'blackjack'}から選択。プレイヤーの初期化方法を決定するために使用されます。
-    
       boolean judgeByRatio(ratio) : 引数により確率を操作する。 　高確率　 →　true　 低確率　　→　false　　(e.g 7:3 →　posibility(7,3) →　true : false)
   */
+
   constructor(name, gameType) {
     // プレイヤーの名前
     this.name = name;
@@ -19,10 +19,10 @@ class Player {
     this.hand = [];
 
     // playerの状態
-    this.playerStatus = "bet";
+    this.status = "bet";
 
     // playerのaction
-    this.playerAction = "bet";
+    this.action = "bet";
   }
 
   // 各継承先クラスで実装
@@ -51,33 +51,30 @@ class Player {
     return totalScore;
   }
 
-  // blackjackかどうか
+  // boolean: blackjackか判定
   blackjack() {
     return this.getHandScore() == 21;
   }
 
+  // boolean: "A"を持つblackjackか判定
   blackjackAndHasAce() {
     let scoreIsBlackJack = this.blackjack();
     if (scoreIsBlackJack) {
-      let i = 0;
-      while (i < this.hand.length) {
-        if (this.hand[i].rank == "A") return true;
-        i++;
-      }
+      this.hand.forEach(card => {
+        if (card.rank == "A") return true;
+      })
     }
     return false;
   }
 
+  // used for possibility
   judgeByRatio(ratio) {
     const random = Math.floor(Math.random() * 10) + 1;　//1～10
-    if (random <= ratio) {
-      return true;
-    }
-    return false;
+    return random <= ratio;
   }
 
-
-
+  // statusを変更する
+  switchStatus() {}
 }
 
 module.exports = Player;
