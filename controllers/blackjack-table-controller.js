@@ -7,7 +7,7 @@
 
   変数
    turnCounter : Number → player配列へのアクセス用。剰余計算でアクセス。
-   gamePhase : gameFlowの管理　→　{'betting', 'playing', 'evaluatingWinners', 'roundOver'}
+   gamePhase : gameFlowの管理　→　{'waitingForBets','betting', 'playing', 'evaluatingWinners', 'roundOver'}
    betDenominations : userがかけられるチップの単位　aiの場合使用しない
    resultLog : roundごとの結果を格納
    playerNumber : playerの数を設定　ai = 3に設定　
@@ -33,6 +33,7 @@ class Table {
 
   // blackjack用gamePhase
   static gamePhaseForBlackjack = {
+    'waitingForBets': 'betting',
     'betting': 'playing',
     'playing': 'evaluatingWinners',
     'evaluatingWinners': 'roundOver',
@@ -81,7 +82,7 @@ class Table {
 
     this.playerNumber = this.players.length;
 
-    this.gamePhase = 'betting';
+    this.gamePhase = 'waitingForBets';
 
     // 各ラウンドの結果をログに記録する
     this.resultsLog = [];
@@ -143,7 +144,6 @@ class Table {
       currPlayer.chip += currPlayer.winAmount;
       if (currPlayer.chip <= 0) {
         currPlayer.switchStatus("blackjack");
-        // currPlayer.action = "broke";
       }
       this.turnCounter++;
     }
@@ -169,13 +169,11 @@ class Table {
      return null : デッキから2枚のカードを手札に加えることで、全プレイヤーの状態を更新します。
      NOTE: プレイヤーのタイプが「ハウス」の場合は、はじめ手札一枚。
   */
-  blackjackAssignPlayerHands() {
-    this.players.forEach(player => {
-      if (this.canPlayForBlackjack(player)) {
-        if (player == this.house) player.hand.push(this.deck.drawOne());
-        else player.hand.push(this.deck.drawOne(), this.deck.drawOne());
-      }
-    });
+  blackjackAssignPlayerHands(player) {
+    if (this.canPlayForBlackjack(player)) {
+      if (player == this.house) player.hand.push(this.deck.drawOne());
+      else player.hand.push(this.deck.drawOne(), this.deck.drawOne());
+    }
   }
 
   /*
@@ -216,51 +214,50 @@ class Table {
   haveTurn(userData = null) {
     if (this.gameType == "blackjack") {
       // blackjackのルール適用
-      if (this.gamePhase == "betting") {
+      if (this.gamePhase == "waitingForBets") {
+        let currPlayer = this.getTurnPlayer();
         // step1 cardを配る
-        this.blackjackAssignPlayerHands();
+        this.blackjackAssignPlayerHands(currPlayer);
 
-        // step2 betする player.status != broke && house以外(house.bet = -1)
-        this.players.forEach(player => {
-          if (this.canPlayForBlackjack(player)) {
-            // player bet
-            this.evaluateMove(player, userData);
-            // status →　player:bet → playing house : waiting → playing
-            if (player != this.house) player.switchStatus("blackjack");
-          }
-        });
+        // house(lastPlayer)で次のフェーズ　→　 gamePhase更新 waitingForBets →　betting
+        if (this.onLastPlayer()) this.switchGamePhase(Table.gamePhaseForBlackjack);
+        // 次のplayer
+        this.turnCounter++;
+      } else if (this.gamePhase == "betting") {
+        let currPlayer = this.getTurnPlayer();
+        // step2 betする
 
-        // gamePhase更新
-        this.switchGamePhase(Table.gamePhaseForBlackjack);
+        this.evaluateMove(currPlayer, userData);
+        // houseだけbetしない　→　waitingのまま　
+        if (!this.onLastPlayer()) currPlayer.switchStatus("blackjack");
+
+        // house(lastPlayer)で次のフェーズ　→　 gamePhase更新 betting →　playing
+        if (this.onLastPlayer()) this.switchGamePhase(Table.gamePhaseForBlackjack);
+
+        // 次のplayer
+        this.turnCounter++;
       } else if (this.gamePhase == "playing") {
-        let cache = Array(this.playerNumber).fill(false);
-        while (cache.includes(false)) {
-          let currPlayer = this.getTurnPlayer();
-          // houseは、playerのstatusが確定するまで実施しない。
-          if (!this.onLastPlayer()) this.evaluateMove(currPlayer,userData);
 
-          let decesionMade = this.actionsResolved(currPlayer);
-          let index = (this.turnCounter - 1) % this.playerNumber;
-          if (this.onLastPlayer() || decesionMade) {
-            cache[index] = true;
-            this.turnCounter++;
-            continue;
+        let currPlayer = this.getTurnPlayer();
+
+        if (this.house.status == "waiting") {
+          if (this.actionsResolved()) this.house.switchStatus("blackjack");  //全playerのactionが決定したら、houseのturn (waitingからplaying)
+
+
+          if (this.actionsResolved(currPlayer)) {
+            this.turnCounter++; //actionが決定したら次のplayer
+          } else {
+            this.getTurnPlayer().hand.push(this.deck.drawOne());
+            this.evaluateMove(currPlayer, userData);
           }
-          // カードをdraw、手札に加える
-          this.getTurnPlayer().hand.push(this.deck.drawOne());
-          // 次のplayerへ
-          this.turnCounter++;
+        } else {
+          // this.house.status == "playing" →　全playerのactionが決定
+          if (this.actionsResolved(this.house)) this.switchGamePhase(Table.gamePhaseForBlackjack);
+          else {
+            this.house.hand.push(this.deck.drawOne());
+            this.evaluateMove(this.house, userData);
+          }
         }
-        // houseのstatus更新
-        this.house.switchStatus("blackjack");
-        
-        this.evaluateMove(this.house);
-        while (!this.actionsResolved(this.house)) {
-          this.house.hand.push(this.deck.drawOne());
-          this.evaluateMove(this.house);
-        }
-
-        this.switchGamePhase(Table.gamePhaseForBlackjack);
       } else if (this.gamePhase == "evaluatingWinners") {
         this.blackjackEvaluateAndGetRoundResults();
         // reset
@@ -289,15 +286,15 @@ class Table {
 
   /*
     playerがセット{'broke', 'bust', 'stand', 'surrender'}のgamePhaseを持っていればtrueを返し、持っていなければfalseを返します。
-    //player =  null → 全てのplayer対象
+    //player =  null → house以外のplayerが対象
     //player != null → 特定のplayer対象
   */
   actionsResolved(player = null) {
     let hasAction = true;
     if (player == null) {
-      this.players.forEach(player => {
-        if (!(player.action in Table.actionMap)) hasAction = false;
-      });
+      for (let i = 0; i < this.playerNumber - 1; i++) {
+        if (!(this.players[i].action in Table.actionMap)) hasAction = false;
+      }
     } else {
       if (!(player.action in Table.actionMap)) hasAction = false;
     }
@@ -794,7 +791,7 @@ class Render {
     // house info 
     let houseInfo = Render.houseInfo(house, ["text-white", "d-flex", "m-0", "p-0", "justify-content-center"]);
     // house cards
-    let houseCards = Render.cards(house.name, house.hand, ["d-flex", "justify-content-center", "pt-3", "pb-5"], gamePhase);
+    let houseCards = Render.cards(house.name, house.hand, ["d-flex", "justify-content-center"], gamePhase);
 
     houseContainer.append(houseName, houseInfo, houseCards);
     return houseContainer;
@@ -806,9 +803,9 @@ class Render {
     players.setAttribute("id", "playersDiv");
     players.classList.add("d-flex", "justify-content-center");
 
-    let ai1 = Render.player(playersArr[0]);
-    let user = Render.player(playersArr[1]);
-    let ai2 = Render.player(playersArr[2]);
+    let ai1 = Render.player(playersArr[0], gamePhase);
+    let user = Render.player(playersArr[1], gamePhase);
+    let ai2 = Render.player(playersArr[2], gamePhase);
     players.append(ai1, user, ai2);
     playersContainer.append(players);
 
@@ -825,7 +822,7 @@ class Render {
     // player info
     let playerInfo = Render.playerInfo(playerClass, ["text-white", "d-flex", "m-0", "p-0", "justify-content-center"]);
     // player cards
-    let playerCards = Render.cards(player.name, playerClass.hand, ["d-flex", "justify-content-center"], gamePhase);
+    let playerCards = Render.cards(playerClass.name, playerClass.hand, ["d-flex", "justify-content-center"], gamePhase);
 
     player.append(playerName, playerInfo, playerCards);
 
@@ -1010,36 +1007,27 @@ class Controllers {
   static startGame(gameMode, userName) {
     let table = new Table(gameMode, userName);
 
-    // userが
-    if(table.getTurnPlayer().type=="user") { 
-      if(table.user.status =="bet") { 
-        table.haveTurn(3);
-      }
+    while (table.gamePhase != "betting") {
+      table.haveTurn();
+    }
 
-
-
-    } 
-
-
-
-    
     // table表示
     Render.table(table);
 
   }
 
   // userがbetボタンを押下
-  static userBet() { 
+  static userBet() {
 
   }
 
   // userのアクション
-  static userAction() { 
+  static userAction() {
 
   }
 
   // OKを押して次のラウンドへ
-  static nextRound() { 
+  static nextRound() {
 
   }
 
