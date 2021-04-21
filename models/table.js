@@ -1,9 +1,16 @@
 const Deck = require('./deck');
+const User = require('./_player/user');
 const AI = require('./_player/ai');
 const House = require('./_player/house');
+const e = require('express');
+
 
 /* overview
    blackjack　gameFlow  user, ai × 2 , house の  3 player + house用  　
+
+   nameとgameModeを受け取る。
+
+   // userName == ai のとき、aiの対戦にする。　→　今回実装なし
 
   変数
    turnCounter : Number → player配列へのアクセス用。剰余計算でアクセス。
@@ -35,7 +42,8 @@ class Table {
   static gamePhaseForBlackjack = {
     'betting': 'playing',
     'playing': 'evaluatingWinners',
-    'evaluatingWinners': 'roundOver'
+    'evaluatingWinners': 'roundOver',
+    "gameOver": "gameOver"
   };
 
   static actionMap =
@@ -45,7 +53,7 @@ class Table {
       "stand": "stand",
       "surrender": "surrender"
     };
-  constructor(gameType, betDenominations = [5, 20, 50, 100]) {
+  constructor(gameType, userName, betDenominations = [5, 20, 50, 100]) {
     // gameType
     this.gameType = gameType;
 
@@ -55,17 +63,24 @@ class Table {
     // deck
     this.deck = new Deck(this.gameType);
 
-    // player
+    // players
     this.players = [];
 
-    // user 
-    //this.user=new User('user',this.gameType));
-    // this.players.push(this.user);
+    this.players.push(new AI("ai1", this.gameType));
 
-    // ai × 3
-    for (let i = 0; i < 3; i++) {
-      this.players.push(new AI(`ai${i + 1}`, this.gameType));
+    this.user = null;
+
+    // userName == ai のとき、aiの対戦にする。　→　今回実装なし
+    if (userName == "ai") {
+      this.user = new AI("ai2", this.gameType);
+      // this.user = new User(userName, this.gameType);
+    } else {
+      this.user = new User(userName, this.gameType);
     }
+    this.players.push(this.user);
+
+    this.players.push(new AI("ai3", this.gameType));
+
     // house
     this.house = new House('house', this.gameType);
 
@@ -85,8 +100,8 @@ class Table {
       EX:
       プレイヤーが「ヒット」し、手札が21以上の場合、gamePhaseを「バスト」に設定し、チップからベットを引きます。
   */
-  evaluateMove(player) {
-    let gameDecision = player.prompt();
+  evaluateMove(player, userData = null) {
+    let gameDecision = player.prompt(userData);
     player.action = gameDecision.action;
     player.bet = gameDecision.bet;
   }
@@ -205,7 +220,7 @@ class Table {
      Number userData : テーブルモデルの外部から渡されるデータです。ボタン押下で選択したデータをuserDataに格納してplayerの状態を更新する。
      return Null : このメソッドはテーブルの状態を更新するだけで、値を返しません。
   */
-  haveTurn(userData) {
+  haveTurn(userData = null) {
     if (this.gameType == "blackjack") {
       // blackjackのルール適用
       if (this.gamePhase == "betting") {
@@ -216,9 +231,9 @@ class Table {
         this.players.forEach(player => {
           if (this.canPlayForBlackjack(player)) {
             // player bet
-            this.evaluateMove(player);
+            this.evaluateMove(player, userData);
             // status →　player:bet → playing house : waiting → playing
-            player.switchStatus("blackjack");
+            if (player != this.house) player.switchStatus("blackjack");
           }
         });
 
@@ -229,7 +244,7 @@ class Table {
         while (cache.includes(false)) {
           let currPlayer = this.getTurnPlayer();
           // houseは、playerのstatusが確定するまで実施しない。
-          if (!this.onLastPlayer()) this.evaluateMove(currPlayer);
+          if (!this.onLastPlayer()) this.evaluateMove(currPlayer,userData);
 
           let decesionMade = this.actionsResolved(currPlayer);
           let index = (this.turnCounter - 1) % this.playerNumber;
@@ -244,19 +259,25 @@ class Table {
           this.turnCounter++;
         }
         // houseのstatus更新
+        this.house.switchStatus("blackjack");
+
         this.evaluateMove(this.house);
-        while (!this.actionsResolved()) {
+        while (!this.actionsResolved(this.house)) {
           this.house.hand.push(this.deck.drawOne());
           this.evaluateMove(this.house);
         }
 
         this.switchGamePhase(Table.gamePhaseForBlackjack);
+      } else if (this.gamePhase == "evaluatingWinners") {
         this.blackjackEvaluateAndGetRoundResults();
         // reset
         this.blackjackClearPlayerHandsAndBets();
+      } else {
+        // roundOver →　何もしない
       }
     }
   }
+
 
   /*
     return Boolean : テーブルがプレイヤー配列の最初のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
@@ -307,11 +328,6 @@ class Table {
   canPlayForBlackjack(player) {
     return player.status != "broke";
   }
-
-  updatePlayerSatusAndAction() {
-
-  }
-
 }
 
 module.exports = Table;

@@ -59,6 +59,7 @@ class AI extends Player {
     this.chip = 400;
     this.winAmount = 0;
     this.action = "bet";
+    this.type="ai";
   }
 
   /* return GameDecision class (action,bet)

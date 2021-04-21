@@ -46,6 +46,7 @@ class House extends Player {
   constructor(name, gameType) {
     super(name, gameType);
     this.status = "waiting";
+    this.type="house";
   }
 
   /* return GameDecision class (action,bet)

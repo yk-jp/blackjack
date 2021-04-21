@@ -1,6 +1,3 @@
-const Card = require('./card');
-const GameDecision = require('./gameDecision');
-
 class Player {
   /*
       String name : プレイヤーの名前
