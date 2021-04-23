@@ -37,7 +37,7 @@ class User extends Player {
     this.chip = 400;
     this.winAmount = 0;
     this.action = "bet";
-    this.type="user";
+    this.type = "user";
   }
 
   /* return GameDecision class (action,bet)
@@ -47,7 +47,12 @@ class User extends Player {
   */
   prompt(userData) {
     if (this.status == "bet") return new GameDecision("bet", userData);
-    else if (this.status == "playing") return new GameDecision(userData, this.bet);
+    else if (this.status == "playing") {
+      let promptAction = userData;
+      let handScore = this.getHandScore();
+      if (handScore > 21) promptAction = "bust";
+      return new GameDecision(userData, this.bet);
+    }
     return new GameDecision("broke", 0);
   }
 

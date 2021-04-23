@@ -768,6 +768,7 @@ class Render {
   }
 
   static table(table) {
+    this.config.table.innerHTML = "";
     let tableContainer = document.createElement("div");  // all cards (dealer, players) div  
     tableContainer.classList.add("col-12");
     // house
@@ -775,9 +776,12 @@ class Render {
     // all players (ai1 , user , ai2)
     let allPlayers = Render.allPlayers(table.players, table.gamePhase);
     // button
-    let optionButton = Render.betOptionButton(table.betDenominations);
+    let button = null;
+    if (table.gamePhase == "betting") button = Render.betOptionButton(table);
+    else if (table.gamePhase == "playing") button = Render.actionButton();
+    else button = Render.okButton();
 
-    tableContainer.append(house, allPlayers, optionButton);
+    tableContainer.append(house, allPlayers, button);
     this.config.table.append(tableContainer);
 
     return tableContainer;
@@ -842,7 +846,7 @@ class Render {
 
     playerInfo.innerHTML =
       `
-     <p class="rem1 text-left px-1">S:${playerClass.status} </p>
+     <p class="rem1 text-left px-1">S:${playerClass.action} </p>
      <p class="rem1 text-left px-1">B:${playerClass.bet} </p>
      <p class="rem1 text-left px-1">C:${playerClass.chip} </p>
     `;
@@ -871,7 +875,7 @@ class Render {
         card.innerHTML =
           `
           <div class="text-center">
-            <img src=${Components.suitImg("Q")} alt="" width="50" height="50">
+            <img src=${Controllers.suitImg("Q")} alt="" width="50" height="50">
           </div>
           <div class="text-center">
             <p class="m-0 text-dark">?</p>
@@ -881,7 +885,7 @@ class Render {
         card.innerHTML =
           `
           <div class="text-center">
-            <img src=${Components.suitImg(hand[i].suit)} alt="" width="50" height="50">
+            <img src=${Controllers.suitImg(hand[i].suit)} alt="" width="50" height="50">
           </div>
           <div class="text-center">
             <p class="m-0 text-dark">${hand[i].rank}</p>
@@ -893,7 +897,7 @@ class Render {
     return cards;
   }
 
-  static betOptionButton(betDenominations) {
+  static betOptionButton(table) {
     let actionsAndBetsDiv = document.createElement("div");
     actionsAndBetsDiv.setAttribute("id", "actionsAndBetsDiv");
     actionsAndBetsDiv.classList.add("d-flex", "pb-5", "pt-4", "justify-content-center");
@@ -907,25 +911,25 @@ class Render {
     let betChoiceDiv = document.createElement("div");
     betChoiceDiv.classList.add("py-2", "h-60", "d-flex", "justify-content-between");
 
-    for (let i = 0; i < betDenominations.length; i++) {
+    for (let i = 0; i < table.betDenominations.length; i++) {
       // <!-- betChoiceDiv -->
       let div = document.createElement("div");
       div.innerHTML =
         `
       <div class="input-group">
         <span class="input-group-btn">
-            <button type="button" class="btn btn-danger btn-number" onclick ="Components.decreaseNumber(${i});">
+            <button type="button" class="btn btn-danger btn-number" onclick ="Controllers.decreaseNumber(${i}); ">
                 -
             </button>
         </span>
         <input id = "bet${i}" type="text" class="input-number text-center" size="2" maxlength="5" value="0">
         <span class="input-group-btn">
-            <button type="button" class="btn btn-success btn-number" onclick ="Components.increaseNumber(${i});">
+            <button type="button" class="btn btn-success btn-number" onclick ="Controllers.increaseNumber(${i});">
                 +
             </button>
         </span>
       </div>
-      <p class="text-white text-center">${betDenominations[i]}</p>
+      <p class="text-white text-center">${table.betDenominations[i]}</p>
       ` ;
       betChoiceDiv.append(div);
     }
@@ -933,7 +937,7 @@ class Render {
     let betSubmitDiv = document.createElement("div");
     betSubmitDiv.innerHTML =
       `
-      <button class="w-100 rem5 text-center btn btn-primary">Submit your bet</button>
+      <button id="submit" class="w-100 rem5 text-center btn btn-primary">Submit your bet</button>
     `;
 
     betsDiv.append(betChoiceDiv, betSubmitDiv);
@@ -955,16 +959,16 @@ class Render {
     actionsDiv.classList.add("d-flex", "flex-wrap", "w-70");
     actionsDiv.innerHTML += `
         <div class="py-2">
-            <button class="text-dark btn btn-light px-5 py-1">Surrender</button>
+            <button class="action-btn btn text-dark  btn-light px-5 py-1">Surrender</button>
         </div>
         <div class="py-2">
-            <button class="btn btn-success px-5 py-1">Stand</button>
+            <button class="action-btn btn btn-success px-5 py-1">Stand</button>
         </div>
         <div class="py-2">
-            <button class="btn btn-warning px-5 py-1">Hit</button>
+            <button class="action-btn btn btn-warning px-5 py-1">Hit</button>
         </div>
         <div class="py-2">
-            <button class="btn btn-danger px-5 py-1">Double</button>
+            <button class="action-btn btn btn-danger px-5 py-1">Double</button>
         </div>
     </div>
     `;
@@ -974,6 +978,14 @@ class Render {
 
     return actionsAndBetsDiv;
   }
+
+  static okButton() { 
+    let okDiv = document.createElement("div");
+    okDiv.classList.add("d-flex","justify-content-center","mt-3");
+    okDiv.innerHTML  = `<div id="okBtn" class="btn bg-primary">OK</div>`;
+    this.config.table.append(okDiv);
+    return okDiv;
+  } 
 
   static resultLog() {
 
@@ -991,8 +1003,8 @@ class Controllers {
 
     const loginPage = document.getElementById("loginPage");
     this.displayNone(loginPage);
-
-    this.startGame(gameMode, userName)
+    // start game
+    this.startGame(gameMode, userName);
   }
 
   /*
@@ -1006,48 +1018,71 @@ class Controllers {
   */
   static startGame(gameMode, userName) {
     let table = new Table(gameMode, userName);
+    Controllers.table(table);
+  }
 
-    while (table.gamePhase != "betting") {
+  static table(table) {
+    if (table.getTurnPlayer().type == "user") {
+      // user
+      if (table.gamePhase == "waitingForBets") {
+        // 何もしない
+        table.haveTurn();
+        // Render.table(table);
+        Controllers.table(table);
+      } else if (table.gamePhase == "betting") {
+        // ボタン押下してbetする →　betting →　playing
+        Controllers.submitUserBets(table);
+      } else if (table.gamePhase == "playing") {
+        // ボタン押下してactionする →　betting →　playing
+        Controllers.userAction(table);
+      } else if(table.gamePhase =="evaluatingWinners") { 
+
+      } else { 
+
+      }
+    } else {
+      //ai,house
       table.haveTurn();
+      Render.table(table);
+      // setTimeout(function () {
+
+      // }, 10);
+      Controllers.table(table);
     }
-
-    // table表示
-    Render.table(table);
-
   }
 
   // userがbetボタンを押下
-  static userBet() {
-
+  static submitUserBets(table) {
+    let submitBtn = document.querySelectorAll("#submit")[0];
+    submitBtn.addEventListener("click", () => {
+      let userBets = Controllers.culcBets(table.betDenominations);
+      if (userBets <= 0) alert("you've got to bet more than 5$");
+      else if (userBets > table.user.chip) alert("you can't bet more than money you have.");
+      else if (confirm(`your bet for ${userBets}$?`)) {
+        // betが成功したら次のplayer
+        table.haveTurn(userBets);
+        Controllers.table(table);
+        Render.table(table);
+      }
+    });
   }
 
   // userのアクション
-  static userAction() {
-
+  static userAction(table) {
+    let actionBtns = document.querySelectorAll(".action-btn");
+    actionBtns.forEach(actionBtn => {
+      actionBtn.addEventListener("click", () => {
+        let action = actionBtn.innerHTML;
+        table.haveTurn(action);
+        Controllers.table(table);
+      });
+    });
   }
 
   // OKを押して次のラウンドへ
   static nextRound() {
 
   }
-
-
-
-
-
-
-  static displayNone(ele) {
-    ele.classList.remove("d-block");
-    ele.classList.add("d-none");
-  }
-
-  static displayBlock(ele) {
-    ele.classList.remove("d-none");
-    ele.classList.add("d-block");
-  }
-}
-
-class Components {
   static suitImg(suit) {
     const suitUrl = {
       "H": "https://recursionist.io/img/dashboard/lessons/projects/heart.png",           //♡
@@ -1059,6 +1094,15 @@ class Components {
     return suitUrl[suit];
   }
 
+  static culcBets(betDenominations) {
+    let userBets = 0;
+    for (let i = 0; i < betDenominations.length; i++) {
+      let value = parseInt(document.getElementById(`bet${i}`).value);
+      userBets += value * betDenominations[i];
+    }
+    return userBets;
+  }
+
   static increaseNumber(num) {
     let betNumInput = document.getElementById(`bet${num}`);
     betNumInput.value++;
@@ -1068,6 +1112,16 @@ class Components {
     let betNumInput = document.getElementById(`bet${num}`);
     let value = betNumInput.value;
     betNumInput.value = (value <= 0) ? 0 : betNumInput.value - 1;
+  }
+
+  static displayNone(ele) {
+    ele.classList.remove("d-block");
+    ele.classList.add("d-none");
+  }
+
+  static displayBlock(ele) {
+    ele.classList.remove("d-none");
+    ele.classList.add("d-block");
   }
 }
 
