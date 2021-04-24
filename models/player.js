@@ -71,7 +71,6 @@ class Player {
   }
 
   // statusを変更する
-  switchStatus() {}
+  switchStatus() { }
 }
-
 module.exports = Player;

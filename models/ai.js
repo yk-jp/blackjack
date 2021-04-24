@@ -1,7 +1,6 @@
-const Player = require('../player');
-const GameDecision = require('../gameDecision');
-
-/* overview
+const Player = require('./player');
+const GameDecision = require('./gameDecision');
+/* AI class 
   継承 
     name : player名
     gameType(blackjack)
@@ -40,13 +39,14 @@ const GameDecision = require('../gameDecision');
       hand: bustを避ける動きを作る。
           score < 17 →　13～15の間の時、9:1の確率で、hit:doubleをする。13より小さい場合は、hit
                                     
-            score = 16、17 → 3:4:3 = hit : stand : surrender
+            score = 16、17 → 3:4:3 = hit : stand : surrender ※カードが3枚の時のみsurrenderが可能
            18<= score <= 20　→　なるべく勝負にかけないようにする。9:1の確率で、stand:hitをする。
             score = 21　→　stand(blackjackで処理を終了) 
             score > 21 → bust
 */
 
 class AI extends Player {
+
   static statusForBlackjack = {
     "bet": "playing",
     "playing": "bet",
@@ -59,7 +59,7 @@ class AI extends Player {
     this.chip = 400;
     this.winAmount = 0;
     this.action = "bet";
-    this.type="ai";
+    this.type = "ai";
   }
 
   /* return GameDecision class (action,bet)
@@ -82,7 +82,7 @@ class AI extends Player {
       let numOfHand = this.hand.length;
       let handScore = this.getHandScore();
       if (handScore < 16) {
-        if (0<= handScore && handScore < 13) promptAction = "hit";
+        if (0 <= handScore && handScore < 13) promptAction = "hit";
         else if (13 <= handScore) promptAction = this.judgeByRatio(9) ? "hit" : !numOfHand == 2 ? "hit" : "double"; //手札が2枚のみdoubleが可能
       }
       else if (handScore == 16 || handScore == 17) {
@@ -93,7 +93,8 @@ class AI extends Player {
           // 2回目 hit or stand
           if (this.judgeByRatio(4)) promptAction = "stand";
         } else {
-          promptAction = "surrender";
+          if (this.hand.length != 3) promptAction = "stand"; //カードが3枚の時のみsurrenderが可能
+          else promptAction = "surrender";
         }
       } else if (18 <= handScore && handScore <= 20) {
         // 9:1 →　stand : hit
@@ -113,5 +114,6 @@ class AI extends Player {
     }
   }
 }
+
 
 module.exports = AI;

@@ -49,6 +49,7 @@ class Table {
       "double": "double",
       "surrender": "surrender"
     };
+
   constructor(gameType, userName, betDenominations = [5, 20, 50, 100]) {
     // gameType
     this.gameType = gameType;
@@ -229,7 +230,6 @@ class Table {
         // 次のplayer
         this.turnCounter++;
       } else if (this.gamePhase == "playing") {
-
         let currPlayer = this.getTurnPlayer();
 
         if (currPlayer != this.house) {
@@ -239,7 +239,10 @@ class Table {
             this.turnCounter++; //actionが決定したら次のplayer
           } else {
             this.evaluateMove(currPlayer, userData);
+            //手札が二枚かつdoubleのときは一枚引く。(actionsResolvedでtrueになり、drawされないため)
+            if (currPlayer.hand.length == 2 && currPlayer.action == "double") currPlayer.hand.push(this.deck.drawOne()); 
             if (!this.actionsResolved(currPlayer)) currPlayer.hand.push(this.deck.drawOne());
+            if(currPlayer == this.user) this.evaluateMove(currPlayer, userData);
             this.turnCounter++;
           }
         } else {
@@ -707,7 +710,7 @@ class AI extends Player {
           // 2回目 hit or stand
           if (this.judgeByRatio(4)) promptAction = "stand";
         } else {
-          if(this.hand.length != 3) promptAction = "stand"; //カードが3枚の時のみsurrenderが可能
+          if (this.hand.length != 3) promptAction = "stand"; //カードが3枚の時のみsurrenderが可能
           else promptAction = "surrender";
         }
       } else if (18 <= handScore && handScore <= 20) {
@@ -772,6 +775,7 @@ class Render {
     this.config.table.innerHTML = "";
     let tableContainer = document.createElement("div");  // all cards (dealer, players) div  
     tableContainer.classList.add("col-12");
+
     // title　→ round or gameOver
     let title = Render.title(table);
 
@@ -1006,10 +1010,10 @@ class Render {
 
     let surrenderBtn = actionsDiv.querySelectorAll(".action-btn")[0];
     let doubleBtn = actionsDiv.querySelectorAll(".action-btn")[3];
-    if (table.user.hand.length > 2){
+    if (table.user.hand.length > 2) {
       surrenderBtn.disabled = true;
       doubleBtn.disabled = true;
-    } 
+    }
 
     actionsAndBetsDiv.append(actionsDiv);
     this.config.table.append(actionsAndBetsDiv);
@@ -1031,7 +1035,7 @@ class Render {
     let resultsLogDiv = document.createElement("div");
     resultsLogDiv.classList.add("d-flex", "justify-content-center", "flex-column", "bg-green", "text-white", "mt-2");
     resultsLogDiv.innerHTML = `<div class="hover">
-                                <p> check resultsLog </p>
+                                <p>click here and check resultsLog </p>
                               </div>
                             `;
     let contentDiv = document.createElement("div");
@@ -1069,7 +1073,6 @@ class Controllers {
 
     const loginPage = document.getElementById("loginPage");
     loginPage.classList.toggle("d-none");
-    // this.displayNone(loginPage);
     // start game
     this.startGame(gameMode, userName);
   }
@@ -1096,7 +1099,6 @@ class Controllers {
         if (table.gamePhase == "waitingForBets") {
           // 何もしない
           table.haveTurn();
-          Render.table(table);
           Controllers.table(table);
         } else if (table.gamePhase == "betting") {
           // ボタン押下してbetする →　betting →　playing
@@ -1113,10 +1115,10 @@ class Controllers {
       } else {
         //ai,house
         let currPlayer = table.getTurnPlayer();
-        if (!table.actionsResolved(currPlayer)) {  
+        if (!table.actionsResolved(currPlayer)) {
           table.haveTurn();
-          if(table.gamePhase =="waitingForBets") Controllers.table(table);
-          else { 
+          if (table.gamePhase == "waitingForBets") Controllers.table(table);
+          else {
             setTimeout(function () {
               Controllers.table(table);
             }, 1000);
@@ -1130,10 +1132,8 @@ class Controllers {
       // table.gamePhase == evaluatinWinners or roundOver or gameOver
       if (table.gamePhase == "evaluatingWinners") {
         table.haveTurn();
-        Render.table(table);
         Controllers.table(table);
       } else if (table.gamePhase == "roundOver" || table.gamePhase == "gameOver") {
-        Render.table(table);
         Controllers.userDecision(table);
       }
     }
@@ -1149,7 +1149,6 @@ class Controllers {
       else {
         // betが成功したら次のplayer
         table.haveTurn(userBets);
-        Render.table(table);
         Controllers.table(table);
       }
     });
@@ -1162,7 +1161,6 @@ class Controllers {
       actionBtn.addEventListener("click", () => {
         let action = actionBtn.innerHTML;
         table.haveTurn(action.toLowerCase()); //buttonの各initialは大文字　→　小文字
-        Render.table(table);
         Controllers.table(table);
       });
     });

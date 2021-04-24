@@ -1,6 +1,7 @@
 const Player = require('../player');
 const GameDecision = require('../gameDecision');
 
+
 /* overview
   継承 
     name : player名
@@ -51,7 +52,7 @@ class User extends Player {
       let promptAction = userData;
       let handScore = this.getHandScore();
       if (handScore > 21) promptAction = "bust";
-      return new GameDecision(userData, this.bet);
+      return new GameDecision(promptAction, this.bet);
     }
     return new GameDecision("broke", 0);
   }
@@ -63,5 +64,6 @@ class User extends Player {
     }
   }
 }
+
 
 module.exports = User;

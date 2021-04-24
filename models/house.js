@@ -1,7 +1,7 @@
 const Player = require('../player');
 const GameDecision = require('../gameDecision');
 
-/* overview
+/* House class
   継承 
     name : player名
     gameType(blackjack)
@@ -46,7 +46,8 @@ class House extends Player {
   constructor(name, gameType) {
     super(name, gameType);
     this.status = "waiting";
-    this.type="house";
+    this.action = "waiting";
+    this.type = "house";
   }
 
   /* return GameDecision class (action,bet)

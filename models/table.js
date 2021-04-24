@@ -1,7 +1,3 @@
-const Deck = require('./deck');
-const User = require('./_player/user');
-const AI = require('./_player/ai');
-const House = require('./_player/house');
 /* overview
    blackjack　gameFlow  user, ai × 2 , house の  3 player + house用  　
 
@@ -41,6 +37,7 @@ class Table {
     'betting': 'playing',
     'playing': 'evaluatingWinners',
     'evaluatingWinners': 'roundOver',
+    'roundOver': 'waitingForBets',
     "gameOver": "gameOver"
   };
 
@@ -49,9 +46,10 @@ class Table {
       "broke": "broke",
       "bust": "bust",
       "stand": "stand",
-      "double":"double",
+      "double": "double",
       "surrender": "surrender"
     };
+
   constructor(gameType, userName, betDenominations = [5, 20, 50, 100]) {
     // gameType
     this.gameType = gameType;
@@ -71,7 +69,7 @@ class Table {
 
     // userName == ai のとき、aiの対戦にする。　→　今回実装なし
     if (userName == "ai") {
-      this.user = new AI("ai2", this.gameType);
+      this.user = new User(userName, this.gameType);
       // this.user = new User(userName, this.gameType);
     } else {
       this.user = new User(userName, this.gameType);
@@ -154,17 +152,13 @@ class Table {
     }
 
     // round終了
-    let log = `round : ${this.resultsLog.length + 1}`;
+    let log = `round${this.resultsLog.length + 1}: `;
     this.players.forEach(player => {
-      if (player != this.house && this.canPlayForBlackjack(player)) {
-        log += ` ◇${player.name}: action:${player.action}, bet:${player.bet}, won:${player.winAmount}
-       `;
+      if (player != this.house) {
+        log += `◇${player.name}: action: ${player.action}, bet: ${player.bet}, won: ${player.winAmount}`;
       }
     });
     this.resultsLog.push(log);
-
-    // gamePhase=roundOverへ更新 user.statusがbrokeの場合、gameOver  
-    this.switchGamePhase(Table.gamePhaseForBlackjack);
 
     return log;
   }
@@ -182,20 +176,17 @@ class Table {
 
   /*
      return null : テーブル内のすべてのプレイヤーの状態を更新し、手札を空の配列に、ベットを0に設定します。 
+                   gamePhaseをroundOver　→　betting
   */
   blackjackClearPlayerHandsAndBets() {
+    this.switchGamePhase(Table.gamePhaseForBlackjack);
     this.players.forEach(player => {
       player.hand = [];
       player.bet = 0;
       player.switchStatus("blackjack");
       if (this.canPlayForBlackjack(player)) player.action = "bet";
-
-      if (player == this.house) {
-        player.bet = -1;
-        player.action = "waiting";
-      } else {
-        player.winAmount = 0;
-      }
+      if (player == this.house) player.action = "waiting";
+      else player.winAmount = 0;
     });
     // cardをリセット
     this.deck.resetDeck();
@@ -239,7 +230,6 @@ class Table {
         // 次のplayer
         this.turnCounter++;
       } else if (this.gamePhase == "playing") {
-
         let currPlayer = this.getTurnPlayer();
 
         if (currPlayer != this.house) {
@@ -249,6 +239,8 @@ class Table {
             this.turnCounter++; //actionが決定したら次のplayer
           } else {
             this.evaluateMove(currPlayer, userData);
+            //手札が二枚かつdoubleのときは一枚引く。(actionsResolvedでtrueになり、drawされないため)
+            if (currPlayer.hand.length == 2 && currPlayer.action == "double") currPlayer.hand.push(this.deck.drawOne()); 
             if (!this.actionsResolved(currPlayer)) currPlayer.hand.push(this.deck.drawOne());
             this.turnCounter++;
           }
@@ -268,22 +260,13 @@ class Table {
         }
       } else if (this.gamePhase == "evaluatingWinners") {
         this.blackjackEvaluateAndGetRoundResults();
+        this.switchGamePhase(Table.gamePhaseForBlackjack);
       } else {
-        // roundOver
-        // this.blackjackClearPlayerHandsAndBets();
+        //roundOver →　userのアクション
+        this.blackjackClearPlayerHandsAndBets();
       }
     }
   }
-
-
-  /*
-    return Boolean : テーブルがプレイヤー配列の最初のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
-    // betをリセットするとき使用
-  */
-  onFirstPlayer() {
-    return this.players[0] == this.getTurnPlayer();
-  }
-
   /*
     return Boolean : テーブルがプレイヤー配列の最後のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
   */
@@ -321,7 +304,7 @@ class Table {
 
   switchGamePhase(gamePhase) {
     this.gamePhase = gamePhase[this.gamePhase];
-    if (this.gamePhase == "roundOver" && this.user.status == "broke") this.gamePhase == gamePhase["gameOver"];
+    if (this.gamePhase == "roundOver" && this.user.status == "broke") this.gamePhase = gamePhase["gameOver"];
   }
 
   /*
