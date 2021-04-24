@@ -2,9 +2,6 @@ const Deck = require('./deck');
 const User = require('./_player/user');
 const AI = require('./_player/ai');
 const House = require('./_player/house');
-const e = require('express');
-
-
 /* overview
    blackjack　gameFlow  user, ai × 2 , house の  3 player + house用  　
 
@@ -14,7 +11,7 @@ const e = require('express');
 
   変数
    turnCounter : Number → player配列へのアクセス用。剰余計算でアクセス。
-   gamePhase : gameFlowの管理　→　{'betting', 'playing', 'evaluatingWinners', 'roundOver'}
+   gamePhase : gameFlowの管理　→　{'waitingForBets','betting', 'playing', 'evaluatingWinners', 'roundOver'}
    betDenominations : userがかけられるチップの単位　aiの場合使用しない
    resultLog : roundごとの結果を格納
    playerNumber : playerの数を設定　ai = 3に設定　
@@ -40,7 +37,7 @@ class Table {
 
   // blackjack用gamePhase
   static gamePhaseForBlackjack = {
-    'waitingForBets':'betting',
+    'waitingForBets': 'betting',
     'betting': 'playing',
     'playing': 'evaluatingWinners',
     'evaluatingWinners': 'roundOver',
@@ -52,6 +49,7 @@ class Table {
       "broke": "broke",
       "bust": "bust",
       "stand": "stand",
+      "double":"double",
       "surrender": "surrender"
     };
   constructor(gameType, userName, betDenominations = [5, 20, 50, 100]) {
@@ -158,15 +156,14 @@ class Table {
     // round終了
     let log = `round : ${this.resultsLog.length + 1}`;
     this.players.forEach(player => {
-      if (player != this.house && player.status != "broke") {
+      if (player != this.house && this.canPlayForBlackjack(player)) {
         log += ` ◇${player.name}: action:${player.action}, bet:${player.bet}, won:${player.winAmount}
-       
        `;
       }
     });
     this.resultsLog.push(log);
 
-    // gamePhaseの更新 roundOverへ更新
+    // gamePhase=roundOverへ更新 user.statusがbrokeの場合、gameOver  
     this.switchGamePhase(Table.gamePhaseForBlackjack);
 
     return log;
@@ -219,7 +216,7 @@ class Table {
   haveTurn(userData = null) {
     if (this.gameType == "blackjack") {
       // blackjackのルール適用
-      if(this.gamePhase == "waitingForBets") { 
+      if (this.gamePhase == "waitingForBets") {
         let currPlayer = this.getTurnPlayer();
         // step1 cardを配る
         this.blackjackAssignPlayerHands(currPlayer);
@@ -230,8 +227,8 @@ class Table {
         this.turnCounter++;
       } else if (this.gamePhase == "betting") {
         let currPlayer = this.getTurnPlayer();
-
         // step2 betする
+
         this.evaluateMove(currPlayer, userData);
         // houseだけbetしない　→　waitingのまま　
         if (!this.onLastPlayer()) currPlayer.switchStatus("blackjack");
@@ -245,30 +242,35 @@ class Table {
 
         let currPlayer = this.getTurnPlayer();
 
-        if (this.house.status == "waiting") {
+        if (currPlayer != this.house) {
           if (this.actionsResolved()) this.house.switchStatus("blackjack");  //全playerのactionが決定したら、houseのturn (waitingからplaying)
-
 
           if (this.actionsResolved(currPlayer)) {
             this.turnCounter++; //actionが決定したら次のplayer
           } else {
-            this.getTurnPlayer().hand.push(this.deck.drawOne());
             this.evaluateMove(currPlayer, userData);
+            if (!this.actionsResolved(currPlayer)) currPlayer.hand.push(this.deck.drawOne());
+            this.turnCounter++;
           }
         } else {
           // this.house.status == "playing" →　全playerのactionが決定
-          if (this.actionsResolved(this.house)) this.switchGamePhase(Table.gamePhaseForBlackjack);
-          else { 
-            this.house.hand.push(this.deck.drawOne());
-            this.evaluateMove(this.house, userData);
+          if (this.actionsResolved(this.house)) {
+            this.switchGamePhase(Table.gamePhaseForBlackjack);
+            this.turnCounter++;
+          } else {
+            if (this.house.status == "waiting") this.turnCounter++;
+            else {
+              // waitingが終わったら(playerのactionが確定したら)houseのturn
+              this.house.hand.push(this.deck.drawOne());
+              this.evaluateMove(this.house, userData);
+            }
           }
         }
       } else if (this.gamePhase == "evaluatingWinners") {
         this.blackjackEvaluateAndGetRoundResults();
-        // reset
-        this.blackjackClearPlayerHandsAndBets();
       } else {
-        // roundOver →　何もしない
+        // roundOver
+        // this.blackjackClearPlayerHandsAndBets();
       }
     }
   }
@@ -306,6 +308,11 @@ class Table {
     return hasAction;
   }
 
+  // userDataに格納されたactionに対するfunctio。actionResolvedと同じ
+  userActionsResolved(userData) {
+    return userData in Table.actionMap;
+  }
+
   /*
   gamePhase切り替え　
   blackjackの場合、betting → playing → evaluatingWinners → roundOver
@@ -314,6 +321,7 @@ class Table {
 
   switchGamePhase(gamePhase) {
     this.gamePhase = gamePhase[this.gamePhase];
+    if (this.gamePhase == "roundOver" && this.user.status == "broke") this.gamePhase == gamePhase["gameOver"];
   }
 
   /*

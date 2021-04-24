@@ -37,6 +37,7 @@ class Table {
     'betting': 'playing',
     'playing': 'evaluatingWinners',
     'evaluatingWinners': 'roundOver',
+    'roundOver': 'waitingForBets',
     "gameOver": "gameOver"
   };
 
@@ -45,6 +46,7 @@ class Table {
       "broke": "broke",
       "bust": "bust",
       "stand": "stand",
+      "double": "double",
       "surrender": "surrender"
     };
   constructor(gameType, userName, betDenominations = [5, 20, 50, 100]) {
@@ -66,7 +68,7 @@ class Table {
 
     // userName == ai のとき、aiの対戦にする。　→　今回実装なし
     if (userName == "ai") {
-      this.user = new AI("ai2", this.gameType);
+      this.user = new User(userName, this.gameType);
       // this.user = new User(userName, this.gameType);
     } else {
       this.user = new User(userName, this.gameType);
@@ -149,18 +151,13 @@ class Table {
     }
 
     // round終了
-    let log = `round : ${this.resultsLog.length + 1}`;
+    let log = `round${this.resultsLog.length + 1}: `;
     this.players.forEach(player => {
-      if (player != this.house && player.status != "broke") {
-        log += ` ◇${player.name}: action:${player.action}, bet:${player.bet}, won:${player.winAmount}
-       
-       `;
+      if (player != this.house) {
+        log += `◇${player.name}: action: ${player.action}, bet: ${player.bet}, won: ${player.winAmount}`;
       }
     });
     this.resultsLog.push(log);
-
-    // gamePhaseの更新 roundOverへ更新
-    this.switchGamePhase(Table.gamePhaseForBlackjack);
 
     return log;
   }
@@ -178,22 +175,17 @@ class Table {
 
   /*
      return null : テーブル内のすべてのプレイヤーの状態を更新し、手札を空の配列に、ベットを0に設定します。 
+                   gamePhaseをroundOver　→　betting
   */
   blackjackClearPlayerHandsAndBets() {
+    this.switchGamePhase(Table.gamePhaseForBlackjack);
     this.players.forEach(player => {
       player.hand = [];
       player.bet = 0;
       player.switchStatus("blackjack");
       if (this.canPlayForBlackjack(player)) player.action = "bet";
-
-      if (player == this.house) {
-        player.bet = -1;
-        player.action = "waiting";
-      } else {
-        player.winAmount = 0;
-      }
-
-
+      if (player == this.house) player.action = "waiting";
+      else player.winAmount = 0;
     });
     // cardをリセット
     this.deck.resetDeck();
@@ -240,43 +232,39 @@ class Table {
 
         let currPlayer = this.getTurnPlayer();
 
-        if (this.house.status == "waiting") {
+        if (currPlayer != this.house) {
           if (this.actionsResolved()) this.house.switchStatus("blackjack");  //全playerのactionが決定したら、houseのturn (waitingからplaying)
-
 
           if (this.actionsResolved(currPlayer)) {
             this.turnCounter++; //actionが決定したら次のplayer
           } else {
-            this.getTurnPlayer().hand.push(this.deck.drawOne());
             this.evaluateMove(currPlayer, userData);
+            if (!this.actionsResolved(currPlayer)) currPlayer.hand.push(this.deck.drawOne());
+            this.turnCounter++;
           }
         } else {
           // this.house.status == "playing" →　全playerのactionが決定
-          if (this.actionsResolved(this.house)) this.switchGamePhase(Table.gamePhaseForBlackjack);
-          else {
-            this.house.hand.push(this.deck.drawOne());
-            this.evaluateMove(this.house, userData);
+          if (this.actionsResolved(this.house)) {
+            this.switchGamePhase(Table.gamePhaseForBlackjack);
+            this.turnCounter++;
+          } else {
+            if (this.house.status == "waiting") this.turnCounter++;
+            else {
+              // waitingが終わったら(playerのactionが確定したら)houseのturn
+              this.house.hand.push(this.deck.drawOne());
+              this.evaluateMove(this.house, userData);
+            }
           }
         }
       } else if (this.gamePhase == "evaluatingWinners") {
         this.blackjackEvaluateAndGetRoundResults();
-        // reset
-        this.blackjackClearPlayerHandsAndBets();
+        this.switchGamePhase(Table.gamePhaseForBlackjack);
       } else {
-        // roundOver →　何もしない
+        //roundOver →　userのアクション
+        this.blackjackClearPlayerHandsAndBets();
       }
     }
   }
-
-
-  /*
-    return Boolean : テーブルがプレイヤー配列の最初のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
-    // betをリセットするとき使用
-  */
-  onFirstPlayer() {
-    return this.players[0] == this.getTurnPlayer();
-  }
-
   /*
     return Boolean : テーブルがプレイヤー配列の最後のプレイヤーにフォーカスされている場合はtrue、そうでない場合はfalseを返します。
   */
@@ -301,6 +289,11 @@ class Table {
     return hasAction;
   }
 
+  // userDataに格納されたactionに対するfunctio。actionResolvedと同じ
+  userActionsResolved(userData) {
+    return userData in Table.actionMap;
+  }
+
   /*
   gamePhase切り替え　
   blackjackの場合、betting → playing → evaluatingWinners → roundOver
@@ -309,6 +302,7 @@ class Table {
 
   switchGamePhase(gamePhase) {
     this.gamePhase = gamePhase[this.gamePhase];
+    if (this.gamePhase == "roundOver" && this.user.status == "broke") this.gamePhase = gamePhase["gameOver"];
   }
 
   /*
@@ -530,7 +524,12 @@ class User extends Player {
   */
   prompt(userData) {
     if (this.status == "bet") return new GameDecision("bet", userData);
-    else if (this.status == "playing") return new GameDecision(userData, this.bet);
+    else if (this.status == "playing") {
+      let promptAction = userData;
+      let handScore = this.getHandScore();
+      if (handScore > 21) promptAction = "bust";
+      return new GameDecision(promptAction, this.bet);
+    }
     return new GameDecision("broke", 0);
   }
 
@@ -771,20 +770,51 @@ class Render {
     this.config.table.innerHTML = "";
     let tableContainer = document.createElement("div");  // all cards (dealer, players) div  
     tableContainer.classList.add("col-12");
+
+    // title　→ round or gameOver
+    let title = Render.title(table);
+
     // house
     let house = Render.house(table.house, table.gamePhase);
     // all players (ai1 , user , ai2)
     let allPlayers = Render.allPlayers(table.players, table.gamePhase);
-    // button
-    let button = null;
-    if (table.gamePhase == "betting") button = Render.betOptionButton(table);
-    else if (table.gamePhase == "playing") button = Render.actionButton();
-    else button = Render.okButton();
+    // resultLog
+    let resultsLog = Render.resultsLog(table);
 
-    tableContainer.append(house, allPlayers, button);
+    if (table.gamePhase != "evaluatingWinners" && table.gamePhase != "roundOver" && table.gamePhase != "gameOver") {
+      if (table.getTurnPlayer().type == "user") {
+        // button
+        let button = null;
+        if (table.gamePhase == "betting") button = Render.betOptionButton(table);
+        else if (table.gamePhase == "playing") {
+          if (!table.actionsResolved(table.user)) {
+            button = Render.actionButton(table);
+          } else {
+            tableContainer.append(title, house, allPlayers, resultsLog);
+            return tableContainer;
+          }
+        } else button = Render.roundOverButton(table);
+
+        tableContainer.append(title, house, allPlayers, button, resultsLog);
+      } else {
+        tableContainer.append(title, house, allPlayers, resultsLog);
+      }
+    } else {
+      let button = Render.roundOverButton(table);
+      tableContainer.append(title, house, allPlayers, button, resultsLog);
+    }
+
     this.config.table.append(tableContainer);
 
     return tableContainer;
+  }
+
+  static title(table) {
+    let titleDiv = document.createElement("div");
+    titleDiv.classList.add("d-flex", "justify-content-center");
+    if (table.gamePhase != "gameOver") titleDiv.innerHTML = `<h1>ROUND${table.resultsLog.length + 1}</h1>`;
+    else titleDiv.innerHTML = `<h1>GAME OVER</h1>`;
+    return titleDiv;
   }
 
   static house(house, gamePhase) {
@@ -859,7 +889,7 @@ class Render {
 
     houseInfo.innerHTML =
       `
-     <p class="rem1 text-left px-1">S:${houseClass.status}</p>
+     <p class="rem1 text-left px-1">S:${houseClass.action}</p>
     `;
     return houseInfo;
   }
@@ -947,7 +977,7 @@ class Render {
     return actionsAndBetsDiv;
   }
 
-  static actionButton() {
+  static actionButton(table) {
     let actionsAndBetsDiv = document.createElement("div");
     actionsAndBetsDiv.setAttribute("id", "actionsAndBetsDiv");
 
@@ -973,22 +1003,53 @@ class Render {
     </div>
     `;
 
+    let doubleBtn = actionsDiv.querySelectorAll(".action-btn")[3];
+    if (table.user.hand.length > 2) doubleBtn.disabled = true;
+
     actionsAndBetsDiv.append(actionsDiv);
     this.config.table.append(actionsAndBetsDiv);
 
     return actionsAndBetsDiv;
   }
 
-  static okButton() { 
+  static roundOverButton(table) {
     let okDiv = document.createElement("div");
-    okDiv.classList.add("d-flex","justify-content-center","mt-3");
-    okDiv.innerHTML  = `<div id="okBtn" class="btn bg-primary">OK</div>`;
+    okDiv.classList.add("d-flex", "justify-content-center", "mt-3");
+    if (table.gamePhase == "roundOver") okDiv.innerHTML = `<button id="okBtn" class="btn bg-primary">NEXT ROUND</button>`;
+    else okDiv.innerHTML = `<button id="okBtn" class="btn bg-primary">START NEW GAME</button>`;
+
     this.config.table.append(okDiv);
     return okDiv;
-  } 
+  }
 
-  static resultLog() {
+  static resultsLog(table) {
+    let resultsLogDiv = document.createElement("div");
+    resultsLogDiv.classList.add("d-flex", "justify-content-center", "flex-column", "bg-green", "text-white", "mt-2");
+    resultsLogDiv.innerHTML = `<div class="hover">
+                                <p> check resultsLog </p>
+                              </div>
+                            `;
+    let contentDiv = document.createElement("div");
+    contentDiv.classList.add("scroll");
+    table.resultsLog.forEach(resultLog => {
+      let div = document.createElement("div");
+      div.setAttribute("id", "hover-resultsLog");
+      div.classList.add("text-white", "d-none");
+      resultLog = resultLog.split("◇"); // result
 
+      resultLog.forEach(result => {
+        div.innerHTML += `<p class="text-left">${result}</p>`
+      });
+      contentDiv.append(div);
+      resultsLogDiv.append(contentDiv);
+
+      resultsLogDiv.addEventListener("click", () => {
+        div.classList.toggle("d-none");
+      });
+    });
+
+    this.config.table.append(resultsLogDiv);
+    return resultsLogDiv;
   }
 }
 
@@ -1002,7 +1063,8 @@ class Controllers {
     let gameMode = loginForm.gameMode.value;
 
     const loginPage = document.getElementById("loginPage");
-    this.displayNone(loginPage);
+    loginPage.classList.toggle("d-none");
+    // this.displayNone(loginPage);
     // start game
     this.startGame(gameMode, userName);
   }
@@ -1022,32 +1084,49 @@ class Controllers {
   }
 
   static table(table) {
-    if (table.getTurnPlayer().type == "user") {
-      // user
-      if (table.gamePhase == "waitingForBets") {
-        // 何もしない
+    Render.table(table); //renderする
+
+    if (table.gamePhase != "evaluatingWinners" && table.gamePhase != "roundOver" && table.gamePhase != "gameOver") {
+      if (!table.actionsResolved(table.user) && table.getTurnPlayer().type == "user") { //actionが確定していない場合、userのturn
+        // user
+        if (table.gamePhase == "waitingForBets") {
+          // 何もしない
+          table.haveTurn();
+          Controllers.table(table);
+        } else if (table.gamePhase == "betting") {
+          // ボタン押下してbetする →　betting →　playing
+          Controllers.submitUserBets(table);
+        } else if (table.gamePhase == "playing") {
+          if (!table.actionsResolved(table.user)) Controllers.userAction(table); //actionが確定していない
+          else {
+            //actionが確定
+            table.haveTurn();
+            Render.table(table);
+            Controllers.table(table);
+          }
+        }
+      } else {
+        //ai,house
         table.haveTurn();
-        // Render.table(table);
-        Controllers.table(table);
-      } else if (table.gamePhase == "betting") {
-        // ボタン押下してbetする →　betting →　playing
-        Controllers.submitUserBets(table);
-      } else if (table.gamePhase == "playing") {
-        // ボタン押下してactionする →　betting →　playing
-        Controllers.userAction(table);
-      } else if(table.gamePhase =="evaluatingWinners") { 
-
-      } else { 
-
+        if (table.gamePhase == "waitingForBets") {
+          Render.table(table);
+          Controllers.table(table);
+        } else {
+          setTimeout(function () {
+            Render.table(table);
+            Controllers.table(table);
+          }, 100);
+        }
       }
     } else {
-      //ai,house
-      table.haveTurn();
-      Render.table(table);
-      // setTimeout(function () {
-
-      // }, 10);
-      Controllers.table(table);
+      // table.gamePhase == evaluatinWinners or roundOver or gameOver
+      if (table.gamePhase == "evaluatingWinners") {
+        table.haveTurn();
+        Controllers.table(table);
+      } else if (table.gamePhase == "roundOver" || table.gamePhase == "gameOver") {
+        Render.table(table);
+        Controllers.userDecision(table);
+      }
     }
   }
 
@@ -1058,11 +1137,11 @@ class Controllers {
       let userBets = Controllers.culcBets(table.betDenominations);
       if (userBets <= 0) alert("you've got to bet more than 5$");
       else if (userBets > table.user.chip) alert("you can't bet more than money you have.");
-      else if (confirm(`your bet for ${userBets}$?`)) {
+      else {
         // betが成功したら次のplayer
         table.haveTurn(userBets);
-        Controllers.table(table);
         Render.table(table);
+        Controllers.table(table);
       }
     });
   }
@@ -1073,23 +1152,35 @@ class Controllers {
     actionBtns.forEach(actionBtn => {
       actionBtn.addEventListener("click", () => {
         let action = actionBtn.innerHTML;
-        table.haveTurn(action);
+        table.haveTurn(action.toLowerCase()); //buttonの各initialは大文字　→　小文字
         Controllers.table(table);
       });
     });
   }
 
-  // OKを押して次のラウンドへ
-  static nextRound() {
-
+  /*roundOver or gameOverの時、以下のoption
+   roundover →　next round
+   gameover　→　new game
+  */
+  static userDecision(table) {
+    let okBtn = document.querySelectorAll("#okBtn")[0];
+    okBtn.addEventListener("click", () => {
+      if (table.gamePhase == "roundOver") {
+        table.haveTurn();
+        Controllers.table(table);
+      } else {
+        Render.loginPage(); //login page
+      }
+    });
   }
+
   static suitImg(suit) {
     const suitUrl = {
       "H": "https://recursionist.io/img/dashboard/lessons/projects/heart.png",           //♡
       "D": "https://recursionist.io/img/dashboard/lessons/projects/diamond.png",　　　　　//♦
       "C": "https://recursionist.io/img/dashboard/lessons/projects/clover.png",　　　　  //♧
       "S": "https://recursionist.io/img/dashboard/lessons/projects/spade.png",　        //♠
-      "Q": "https://cdn.pixabay.com/photo/2017/02/01/00/26/cranium-2028555_960_720.png" // ?
+      "Q": "https://recursionist.io/img/questionMark.png" // ?
     };
     return suitUrl[suit];
   }
@@ -1126,3 +1217,4 @@ class Controllers {
 }
 
 Controllers.startGame("blackjack", "user");
+// Render.loginPage();
