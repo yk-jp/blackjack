@@ -145,7 +145,7 @@ class Table {
         }
       }
       currPlayer.chip += currPlayer.winAmount;
-      if (currPlayer.chip <= 0) {
+      if (currPlayer.chip < 5) {
         currPlayer.switchStatus("blackjack");
       }
       this.turnCounter++;
@@ -538,7 +538,7 @@ class User extends Player {
 
   switchStatus(gameType) {
     if (gameType == "blackjack") {
-      if (this.chip <= 0) this.status = User.statusForBlackjack["broke"];
+      if (this.chip < 5) this.status = User.statusForBlackjack["broke"];
       else this.status = User.statusForBlackjack[this.status];
     }
   }
@@ -726,7 +726,7 @@ class AI extends Player {
 
   switchStatus(gameType) {
     if (gameType == "blackjack") {
-      if (this.chip <= 0) this.status = AI.statusForBlackjack["broke"];
+      if (this.chip < 5) this.status = AI.statusForBlackjack["broke"];
       else this.status = AI.statusForBlackjack[this.status];
     }
   }
@@ -1224,5 +1224,5 @@ class Controllers {
   }
 }
 
-Controllers.startGame("blackjack", "user");
-// Render.loginPage();
+// Controllers.startGame("blackjack", "user");
+Render.loginPage();
