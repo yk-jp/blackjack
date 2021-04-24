@@ -586,6 +586,7 @@ class House extends Player {
   constructor(name, gameType) {
     super(name, gameType);
     this.status = "waiting";
+    this.action = "waiting";
     this.type = "house";
   }
 
@@ -652,7 +653,7 @@ class House extends Player {
       hand: bustを避ける動きを作る。
           score < 17 →　13～15の間の時、9:1の確率で、hit:doubleをする。13より小さい場合は、hit
                                     
-            score = 16、17 → 3:4:3 = hit : stand : surrender
+            score = 16、17 → 3:4:3 = hit : stand : surrender ※カードが3枚の時のみsurrenderが可能
            18<= score <= 20　→　なるべく勝負にかけないようにする。9:1の確率で、stand:hitをする。
             score = 21　→　stand(blackjackで処理を終了) 
             score > 21 → bust
@@ -706,7 +707,8 @@ class AI extends Player {
           // 2回目 hit or stand
           if (this.judgeByRatio(4)) promptAction = "stand";
         } else {
-          promptAction = "surrender";
+          if(this.hand.length != 3) promptAction = "stand"; //カードが3枚の時のみsurrenderが可能
+          else promptAction = "surrender";
         }
       } else if (18 <= handScore && handScore <= 20) {
         // 9:1 →　stand : hit
@@ -770,7 +772,6 @@ class Render {
     this.config.table.innerHTML = "";
     let tableContainer = document.createElement("div");  // all cards (dealer, players) div  
     tableContainer.classList.add("col-12");
-
     // title　→ round or gameOver
     let title = Render.title(table);
 
@@ -811,21 +812,21 @@ class Render {
 
   static title(table) {
     let titleDiv = document.createElement("div");
-    titleDiv.classList.add("d-flex", "justify-content-center");
-    if (table.gamePhase != "gameOver") titleDiv.innerHTML = `<h1>ROUND${table.resultsLog.length + 1}</h1>`;
+    titleDiv.classList.add("d-flex", "justify-content-center", "pt-3", "text-gold");
+    if (table.gamePhase != "gameOver") titleDiv.innerHTML = `<h3>ROUND${table.resultsLog.length + 1}</h3>`;
     else titleDiv.innerHTML = `<h1>GAME OVER</h1>`;
     return titleDiv;
   }
 
   static house(house, gamePhase) {
     let houseContainer = document.createElement("div");
-    houseContainer.classList.add("pt-5");
+    houseContainer.classList.add("pt-1");
     // houseName
-    let houseName = Render.playerName(house.name, ["m-0", "text-center", "text-white", "rem3"]);
+    let houseName = Render.playerName(house.name, ["m-0", "text-center", "text-white"]);
     // house info 
     let houseInfo = Render.houseInfo(house, ["text-white", "d-flex", "m-0", "p-0", "justify-content-center"]);
     // house cards
-    let houseCards = Render.cards(house.name, house.hand, ["d-flex", "justify-content-center"], gamePhase);
+    let houseCards = Render.cards(house.hand, ["d-flex", "justify-content-center"], gamePhase);
 
     houseContainer.append(houseName, houseInfo, houseCards);
     return houseContainer;
@@ -835,7 +836,7 @@ class Render {
     let playersContainer = document.createElement("div");
     let players = document.createElement("div");
     players.setAttribute("id", "playersDiv");
-    players.classList.add("d-flex", "justify-content-center");
+    players.classList.add("d-flex", "justify-content-center", "flex-row", "w-100");
 
     let ai1 = Render.player(playersArr[0], gamePhase);
     let user = Render.player(playersArr[1], gamePhase);
@@ -849,14 +850,14 @@ class Render {
   static player(playerClass, gamePhase) {
     let player = document.createElement("div");
     player.setAttribute("id", playerClass.type);
-    player.classList.add("flex-column");
-    if (playerClass.type == "user") player.classList.add("flex-column", "w-50");
+    player.classList.add("flex-column", "w-25");
+
     // player name
-    let playerName = Render.playerName(playerClass.name, ["m-0", "text-white", "text-center", "rem3"]);
+    let playerName = Render.playerName(playerClass.name, ["m-0", "text-white", "text-center"]);
     // player info
-    let playerInfo = Render.playerInfo(playerClass, ["text-white", "d-flex", "m-0", "p-0", "justify-content-center"]);
+    let playerInfo = Render.playerInfo(playerClass, ["text-white", "d-flex", "justify-content-center"]);
     // player cards
-    let playerCards = Render.cards(playerClass.name, playerClass.hand, ["d-flex", "justify-content-center"], gamePhase);
+    let playerCards = Render.cards(playerClass.hand, ["d-flex", "justify-content-center"], gamePhase);
 
     player.append(playerName, playerInfo, playerCards);
 
@@ -864,7 +865,7 @@ class Render {
   }
 
   static playerName(name, classInfo) {
-    let playerName = document.createElement("p");
+    let playerName = document.createElement("h2");
     playerName.classList.add(...classInfo);
     playerName.innerHTML = `${name}`;
     return playerName;
@@ -894,14 +895,14 @@ class Render {
     return houseInfo;
   }
 
-  static cards(id, hand, classInfo, gamePhase) {
+  static cards(hand, classInfo, gamePhase) {
     let cards = document.createElement("div");
-    cards.setAttribute("id", id);
+
     cards.classList.add(...classInfo);
     for (let i = 0; i < hand.length; i++) {
       let card = document.createElement("div");
-      card.classList.add("bg-white", "border", "mx-2");
-      if (gamePhase == "betting") {
+      card.classList.add("d-flex", "flex-column", "bg-white", "border", "mx-2");
+      if (gamePhase == "waitingForBets" || gamePhase == "betting") {
         card.innerHTML =
           `
           <div class="text-center">
@@ -1003,8 +1004,12 @@ class Render {
     </div>
     `;
 
+    let surrenderBtn = actionsDiv.querySelectorAll(".action-btn")[0];
     let doubleBtn = actionsDiv.querySelectorAll(".action-btn")[3];
-    if (table.user.hand.length > 2) doubleBtn.disabled = true;
+    if (table.user.hand.length > 2){
+      surrenderBtn.disabled = true;
+      doubleBtn.disabled = true;
+    } 
 
     actionsAndBetsDiv.append(actionsDiv);
     this.config.table.append(actionsAndBetsDiv);
@@ -1085,43 +1090,47 @@ class Controllers {
 
   static table(table) {
     Render.table(table); //renderする
-
     if (table.gamePhase != "evaluatingWinners" && table.gamePhase != "roundOver" && table.gamePhase != "gameOver") {
       if (!table.actionsResolved(table.user) && table.getTurnPlayer().type == "user") { //actionが確定していない場合、userのturn
         // user
         if (table.gamePhase == "waitingForBets") {
           // 何もしない
           table.haveTurn();
+          Render.table(table);
           Controllers.table(table);
         } else if (table.gamePhase == "betting") {
           // ボタン押下してbetする →　betting →　playing
           Controllers.submitUserBets(table);
         } else if (table.gamePhase == "playing") {
-          if (!table.actionsResolved(table.user)) Controllers.userAction(table); //actionが確定していない
-          else {
+          if (!table.actionsResolved(table.user)) {
+            Controllers.userAction(table); //actionが確定していない
+          } else {
             //actionが確定
             table.haveTurn();
-            Render.table(table);
             Controllers.table(table);
           }
         }
       } else {
         //ai,house
-        table.haveTurn();
-        if (table.gamePhase == "waitingForBets") {
-          Render.table(table);
-          Controllers.table(table);
+        let currPlayer = table.getTurnPlayer();
+        if (!table.actionsResolved(currPlayer)) {  
+          table.haveTurn();
+          if(table.gamePhase =="waitingForBets") Controllers.table(table);
+          else { 
+            setTimeout(function () {
+              Controllers.table(table);
+            }, 1000);
+          }
         } else {
-          setTimeout(function () {
-            Render.table(table);
-            Controllers.table(table);
-          }, 100);
+          table.haveTurn();
+          Controllers.table(table); //actionが確定しているplayerのとき、rendering遅延が発生するのを防ぐ
         }
       }
     } else {
       // table.gamePhase == evaluatinWinners or roundOver or gameOver
       if (table.gamePhase == "evaluatingWinners") {
         table.haveTurn();
+        Render.table(table);
         Controllers.table(table);
       } else if (table.gamePhase == "roundOver" || table.gamePhase == "gameOver") {
         Render.table(table);
@@ -1153,6 +1162,7 @@ class Controllers {
       actionBtn.addEventListener("click", () => {
         let action = actionBtn.innerHTML;
         table.haveTurn(action.toLowerCase()); //buttonの各initialは大文字　→　小文字
+        Render.table(table);
         Controllers.table(table);
       });
     });
