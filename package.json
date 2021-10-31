@@ -6,7 +6,7 @@
     "scripts": {
         "test": "",
         "dev": "nodemon src/index.ts",
-        "start": "node dist/index.js",
+        "start": "NODE_PATH=./dist node ./dist/index.js",
         "build": "tsc -p ."
     },
     "repository": {
