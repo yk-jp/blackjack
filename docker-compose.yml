@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  blackjack-ts-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    volumes:
+     - $PWD:/usr/app
+    container_name: blackjack-ts-node
+    expose:
+       - '5000'
+    ports:
+       - '5000:5000'
+    command: npm run dev
