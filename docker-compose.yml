@@ -1,16 +1,42 @@
-version: '3.9'
-
+version: "3"
 services:
-  blackjack-ts-node:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: base
-    volumes:
-     - $PWD:/usr/app
-    container_name: blackjack-ts-node
-    expose:
-       - '5000'
-    ports:
-       - '5000:5000'
-    command: npm run dev
+      blackjack-client:
+        image:  blackjack-client
+        stdin_open: true
+        build: ./client/
+        ports:
+          - "3000:3000"
+        networks:
+          - blackjack-network
+        volumes: 
+          - ./client/:/usr/app
+          - /usr/app/node_modules
+
+      blackjack-server:
+        image: blackjack-server
+        build: ./server/
+        ports:
+          - "5000:5000"
+        networks:
+          - blackjack-network
+        volumes: 
+          - ./server/:/usr/app
+          - /usr/app/node_modules
+        depends_on: 
+          - mongo
+      mongo:
+        image: mongo
+        networks: 
+          - blackjack-network
+        ports:
+          - "27017:27017"
+        volumes: 
+          - blackjack-mongo-volumes:/data/db
+
+networks:
+  blackjack-network:
+    driver: bridge
+volumes:
+  blackjack-mongo-volumes:
+    driver: local
+

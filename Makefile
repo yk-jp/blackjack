@@ -1,8 +1,4 @@
-up:
-	docker-compose up -d
+# -p project name
+run-dev:
+	docker-compose -p blackjack-app up 
 
-down:
-	docker-compose down
-
-up-prod:
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d 
