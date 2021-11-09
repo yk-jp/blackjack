@@ -1,4 +1,4 @@
-FROM node:17-slim as base
+FROM node:17-slim
 
 # Create app directory inside the image
 WORKDIR /usr/app 
@@ -11,8 +11,6 @@ RUN npm install
 # Bundle app source 
 COPY . .
 
-FROM base as production
+EXPOSE 5000
 
-ENV NODE_PATH=./dist
-
-RUN npm run build
+CMD npm run dev
