@@ -1,11 +1,10 @@
 import express, { Application, Response, Request, NextFunction } from "express";
 import mongoose from "mongoose";
+import config from "./config/config";
 
 const app: Application = express();
 
-const URI: string = "mongodb://mongo:27017/blackjack";
-
-mongoose.connect(URI).catch((e) => {
+mongoose.connect(config.db.URI).catch((e) => {
   console.error(e.message);
 });
 
@@ -17,9 +16,9 @@ app.get("/", async (req: Request, res: Response) => {
     title: "Warden of the North",
   });
 
-  const result = db.collection("users").findOne({
-    name: "Eddard Stark"
-  });
+  const result = db.collection("users").find({});
+
+  console.log(result);
 
   res.send(JSON.stringify(result) + "enfffd");
 });

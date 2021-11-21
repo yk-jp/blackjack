@@ -5,8 +5,8 @@
     "main": "index.js",
     "scripts": {
         "test": "",
-        "dev": "nodemon src/index.ts",
-        "start": "NODE_PATH=./dist node ./dist/index.js",
+        "dev": "NODE_ENV=dev nodemon src/index.ts",
+        "start": "NODE_ENV=prod NODE_PATH=./dist node ./dist/index.js",
         "build": "tsc -p ."
     },
     "repository": {
