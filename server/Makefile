@@ -1,4 +1,4 @@
-build:
+build-dev:
 	docker build -t blackjack-server .
 
 build-prod:
