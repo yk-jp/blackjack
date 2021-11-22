@@ -10,7 +10,6 @@ services:
           - blackjack-network
         volumes: 
           - ./client/:/usr/app
-          - /usr/app/node_modules
 
       blackjack-server:
         image: blackjack-server
@@ -21,7 +20,6 @@ services:
           - blackjack-network
         volumes: 
           - ./server/:/usr/app
-          - /usr/app/node_modules
         depends_on: 
           - mongo
       mongo:

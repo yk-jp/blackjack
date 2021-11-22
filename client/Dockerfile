@@ -11,6 +11,8 @@ COPY ./yarn.lock ./
 
 RUN npm install 
 
+# RUN chown -R node /usr/app/node_modules
+
 # Bundle app source 
 COPY . .
 

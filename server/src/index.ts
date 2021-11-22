@@ -11,16 +11,14 @@ mongoose.connect(config.db.URI).catch((e) => {
 const db = mongoose.connection;
 
 app.get("/", async (req: Request, res: Response) => {
-  db.collection("users").insertOne({
-    name: "Eddard Stark",
-    title: "Warden of the North",
-  });
+  // db.collection("users").insertOne({
+  //   name: "Eddard Stark",
+  //   title: "Warden of the North",
+  // });
 
-  const result = db.collection("users").find({});
+  // db.collection("")
 
-  console.log(result);
-
-  res.send(JSON.stringify(result) + "enfffd");
+  res.send("enffvcffaffd");
 });
 
 app.listen(5000, () => {
