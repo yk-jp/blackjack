@@ -9,12 +9,12 @@ import Main from "./pages/Main/Main";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Login />}/>
-        <Route path="/Main" element={<Main />}/>
-      </Routes>
-    </Router>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/Main" element={<Main />} />
+        </Routes>
+      </Router>
   );
 }
 
