@@ -35,7 +35,7 @@ class Card {
     if ("JQK".indexOf(this.rank) !== -1) {
       return 10;
     } else if (this.rank === "A") {
-      // 仮の値
+      // give 11 as a temporary number (It could be 1. Take whichever makes a better hand)
       return 11;
     }
     return parseInt(this.rank);

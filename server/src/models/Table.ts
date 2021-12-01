@@ -48,7 +48,6 @@ class Table {
     // gameType
     this.gameType = gameType;
 
-    // プレイヤーが選択できるベットの単位。
     this.betDenominations = betDenominations;
 
     // deck
@@ -142,10 +141,6 @@ class Table {
     }
   }
 
-  /*
-     テーブル内のすべてのプレイヤーの状態を更新し、手札を空の配列に、ベットを0に設定します。 
-                   gamePhaseをroundOver　→　betting
-  */
   public blackjackClearPlayerHandsAndBets():void {
     this.switchGamePhase(Table.GAMEPHASEFORBLACKJACK);
     this.players.forEach(player => {
@@ -156,71 +151,53 @@ class Table {
       if (player === this.house) player.setAction("waiting");
       else player.setWinAmount(0);
     });
-    // cardをリセット
     this.deck.resetDeck();
     this.turnCounter = 1;
   }
-  /*
-     return Player : 現在のプレイヤー
-  */
+
   public getTurnPlayer():User | Ai | House {
     let index = (this.turnCounter - 1) % this.playerNumber;
     return this.players[index];
   }
 
-  /*
-     Number userData : テーブルモデルの外部から渡されるデータです。ボタン押下で選択したデータをuserDataに格納してplayerの状態を更新する。
-     return Null : このメソッドはテーブルの状態を更新するだけで、値を返しません。
-  */
   public haveTurn(userData = null) {
     if (this.gameType == "blackjack") {
-      // blackjackのルール適用
       if (this.gamePhase == "waitingForBets") {
         let currPlayer:User | Ai|House = this.getTurnPlayer();
-        // step1 cardを配る
         this.blackjackAssignPlayerHands(currPlayer);
 
-        // house(lastPlayer)で次のフェーズ　→　 gamePhase更新 waitingForBets →　betting
         if (this.onLastPlayer()) this.switchGamePhase(Table.GAMEPHASEFORBLACKJACK);
-        // 次のplayer
         this.turnCounter++;
       } else if (this.gamePhase == "betting") {
         let currPlayer = this.getTurnPlayer();
-        // step2 betする
 
         this.evaluateMove(currPlayer, userData);
-        // houseだけbetしない　→　waitingのまま　
         if (!this.onLastPlayer()) currPlayer.switchStatus("blackjack");
 
-        // house(lastPlayer)で次のフェーズ　→　 gamePhase更新 betting →　playing
         if (this.onLastPlayer()) this.switchGamePhase(Table.GAMEPHASEFORBLACKJACK);
 
-        // 次のplayer
         this.turnCounter++;
       } else if (this.gamePhase == "playing") {
         let currPlayer = this.getTurnPlayer();
 
         if (currPlayer != this.house) {
-          if (this.actionsResolved()) this.house.switchStatus("blackjack");  //全playerのactionが決定したら、houseのturn (waitingからplaying)
+          if (this.actionsResolved()) this.house.switchStatus("blackjack"); 
 
           if (this.actionsResolved(currPlayer)) {
-            this.turnCounter++; //actionが決定したら次のplayer
+            this.turnCounter++; 
           } else {
             this.evaluateMove(currPlayer, userData);
-            //手札が二枚かつdoubleのときは一枚引く。(actionsResolvedでtrueになり、drawされないため)
             if (currPlayer.getHand().length == 2 && currPlayer.getAction() === "double") currPlayer.getHand().push(this.deck.drawOne()); 
             if (!this.actionsResolved(currPlayer)) currPlayer.getHand().push(this.deck.drawOne());
             this.turnCounter++;
           }
         } else {
-          // this.house.status == "playing" →　全playerのactionが決定
           if (this.actionsResolved(this.house)) {
             this.switchGamePhase(Table.GAMEPHASEFORBLACKJACK);
             this.turnCounter++;
           } else {
             if (this.house.getStatus() === "waiting") this.turnCounter++;
             else {
-              // waitingが終わったら(playerのactionが確定したら)houseのturn
               this.house.getHand().push(this.deck.drawOne());
               this.evaluateMove(this.house, userData);
             }
@@ -230,7 +207,7 @@ class Table {
         this.blackjackEvaluateAndGetRoundResults();
         this.switchGamePhase(Table.GAMEPHASEFORBLACKJACK);
       } else {
-        //roundOver →　userのアクション
+        //roundOver →　user's accion
         this.blackjackClearPlayerHandsAndBets();
       }
     }
@@ -272,6 +249,15 @@ class Table {
   */
   public canPlayForBlackjack(player:User | Ai | House) {
     return player.getStatus() != "broke";
+  }
+
+  // getter
+  public getGamePhase():string { 
+    return this.gamePhase;
+  };
+
+  public getResultsLog():string[] { 
+    return this.resultsLog;
   }
 }
 
