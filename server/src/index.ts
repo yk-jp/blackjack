@@ -4,19 +4,17 @@ import config from "./config/config";
 
 const app: Application = express();
 
+app.use(express.json())
+
 mongoose.connect(config.db.URI).catch((e) => {
   console.error(e.message);
 });
 
 const db = mongoose.connection;
 
-app.get("/", async (req: Request, res: Response) => {
-  // db.collection("users").insertOne({
-  //   name: "Eddard Stark",
-  //   title: "Warden of the North",
-  // });
+db.once('open',() => console.log("connected to database"));
 
-  // db.collection("")
+app.get("/", async (req: Request, res: Response) => {
 
   res.send("enffvcffaffd");
 });

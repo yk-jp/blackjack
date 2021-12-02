@@ -1,5 +1,8 @@
 FROM node:17-slim
 
+ARG NODE_ENV=prod
+ENV NODE_ENV=${NODE_ENV}
+
 # Create app directory inside the image
 WORKDIR /usr/app 
 
@@ -13,7 +16,7 @@ COPY . .
 
 EXPOSE 5000
 
-ENV NODE_PATH=./dist
+ENV NODE_PATH=./dist 
 
 RUN npm run build
 
