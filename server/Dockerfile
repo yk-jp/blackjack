@@ -1,5 +1,8 @@
 FROM node:17-slim
 
+ARG NODE_ENV=dev
+ENV NODE_ENV=${NODE_ENV}
+
 # Create app directory inside the image
 WORKDIR /usr/app 
 
@@ -13,4 +16,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD npm run dev
+CMD npm run dev-docker
