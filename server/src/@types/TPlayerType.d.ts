@@ -1,0 +1,1 @@
+type TPlayerType = 'user' | 'ai' | 'house';

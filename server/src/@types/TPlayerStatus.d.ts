@@ -1,0 +1,1 @@
+type TPlayerStatus = 'bet'|'playing'|'broke' | 'waiting';
