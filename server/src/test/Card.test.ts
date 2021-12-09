@@ -1,4 +1,4 @@
-import Card from "../models/Card";
+import Card from "../class/Card";
 
 describe("rankNumber", () => {
   describe("Convert rank to proper number", () => {
