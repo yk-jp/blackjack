@@ -1,4 +1,4 @@
-import Table from "../models/Table";
+import Table from "../class/Table";
 
 test("haveTurn() is functioning well with no problems like js version",() => {
   let table = new Table("blackjack", "user");

@@ -15,7 +15,7 @@ import GameDecision from "./GameDecision";
 */
 
 class House extends Player {
-  public static STATUSFORBLACKJACK: { [key: string]: string } = {
+  public static STATUSFORBLACKJACK: { [key: string]: TPlayerStatus } = {
     waiting: "playing",
     playing: "waiting",
   };

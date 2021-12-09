@@ -18,6 +18,16 @@ class GameDecision {
   public getBet(): number {
     return this.bet;
   }
+
+  // setter
+  public setAction(action: string): void {
+    this.action = action;
+  }
+
+  public setBet(bet: number | string): void {
+    if (typeof bet === "string") bet = parseInt(bet);
+    this.bet = bet;
+  }
 }
 
 export default GameDecision;

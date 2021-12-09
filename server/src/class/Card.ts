@@ -1,6 +1,8 @@
+// import type { TCard } from "../@types/TCard";
+
 class Card {
-  public static SUIT: string[] = ["H", "D", "C", "S"];
-  public static RANK: string[] = [
+  public static SUIT: TCard["suit"][] = ["H", "D", "C", "S"];
+  public static RANK: TCard["rank"][] = [
     "A",
     "2",
     "3",
@@ -16,10 +18,10 @@ class Card {
     "K",
   ];
 
-  private suit: string;
-  private rank: string;
+  private suit: TCard["suit"];
+  private rank: TCard["rank"];
 
-  constructor(suit: string, rank: string) {
+  constructor(suit: TCard["suit"], rank: TCard["rank"]) {
     this.suit = suit;
     this.rank = rank;
   }
@@ -41,15 +43,14 @@ class Card {
     return parseInt(this.rank);
   }
 
-  // getter 
-  public getRank():string { 
+  // getter
+  public getRank(): string {
     return this.rank;
   }
 
-  public getSuit():string { 
+  public getSuit(): string {
     return this.suit;
   }
-
 }
 
 export default Card;

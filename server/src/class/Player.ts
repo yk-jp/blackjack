@@ -7,7 +7,7 @@ abstract class Player {
       String gameType : current type of games are only blackjack. If this game were extended, players would be initialized depending on what type of games uesrs pick up.
       boolean judgeByRatio(ratio) : High possibilities　 →　true　 Low possibilities　→　false　　(e.g 7:3 →　posibility(7,3) →　true : false)
   */
-  public static STATUSFORBLACKJACK: { [key: string]: string } = {
+  public static STATUSFORBLACKJACK: { [key: string]: TPlayerStatus } = {
     bet: "playing",
     playing: "bet",
     broke: "broke",
@@ -16,10 +16,10 @@ abstract class Player {
   protected name: string;
   protected gameType: string;
   protected hand: Card[];
-  protected status: string;
+  protected status: TPlayerStatus;
   protected action: string;
   protected winAmount: number;
-  protected type: string;
+  protected type: TPlayerType;
   protected bet: number;
   protected chip: number;
   constructor(name: string, gameType: string) {
@@ -35,7 +35,7 @@ abstract class Player {
     this.action = "bet";
 
     this.winAmount = 0;
-    this.type = "";
+    this.type = "ai";
     this.bet = 0;
     this.chip = 400;
   }
@@ -89,8 +89,12 @@ abstract class Player {
     return random <= ratio;
   }
 
-  public resetHand():void { 
+  public resetHand(): void {
     this.hand = [];
+  }
+
+  public addCard(card: Card): void {
+    this.hand.push(card);
   }
 
   // setter
@@ -98,12 +102,16 @@ abstract class Player {
     this.action = action;
   }
 
-  public setHand(card: Card): void {
-    this.hand.push(card);
+  public setHand(cards: Card[]): void {
+    this.hand = cards;
   }
 
   public setBet(bet: number): void {
     this.bet = bet;
+  }
+
+  public setStatus(status: TPlayerStatus): void {
+    this.status = status;
   }
 
   public setChip(chip: number): void {

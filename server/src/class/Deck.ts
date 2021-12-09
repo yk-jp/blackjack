@@ -1,11 +1,11 @@
 import Card from "./Card";
 
 class Deck {
-  private gameType: string;
+  private gameType: TGameType;
   private cards: Card[];
 
-  constructor(gameType: string | null = null) {
-    this.gameType = gameType as string;
+  constructor(gameType: TGameType | null = null) {
+    this.gameType = gameType as TGameType;
     this.cards = [];
     // reset deck depending on gametype. currently only blackjack
     this.resetDeck(this.gameType);
@@ -33,6 +33,17 @@ class Deck {
 
   public drawOne(): Card {
     return this.cards.pop() as Card;
+  }
+
+  // setter
+
+  public setCards(cards:Card[]):void { 
+    this.cards = cards;
+  }
+
+  // getter
+  public getCards():Card[] { 
+    return this.cards;
   }
 }
 
