@@ -1,6 +1,8 @@
 import Card from "./Card";
 import GameDecision from "./GameDecision";
-
+// types
+import type {TPlayerStatus} from '../types/TPlayerStatus';
+import type {TPlayerType} from '../types/TPlayerType';
 abstract class Player {
   /*
       String name : player name

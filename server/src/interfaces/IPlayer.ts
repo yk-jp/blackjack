@@ -1,3 +1,5 @@
+import type { TCard } from "../types/TCard";
+
 export default interface IPlayer {
   name: string;
   gameType: string;

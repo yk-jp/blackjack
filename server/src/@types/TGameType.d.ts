@@ -1,1 +1,0 @@
-type TGameType = 'blackjack';

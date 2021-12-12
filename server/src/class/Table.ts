@@ -13,6 +13,8 @@ import GameDecision from "./GameDecision";
 import House from "./House";
 import Ai from "./Ai";
 import User from "./User";
+// types
+import type { TGameType } from "../types/TGameType";
 
 class Table {
   // blackjack用gamePhase
@@ -341,7 +343,7 @@ class Table {
   public setResultsLog(resultsLog: string[]): void {
     this.resultsLog = resultsLog;
   }
-  
+
   public setTurnCounter(turnCounter: number): void {
     this.turnCounter = turnCounter;
   }
