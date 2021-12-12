@@ -1,4 +1,6 @@
 import Card from "./Card";
+// types
+import type {TGameType} from '../types/TGameType';
 
 class Deck {
   private gameType: TGameType;

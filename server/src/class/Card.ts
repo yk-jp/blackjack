@@ -1,4 +1,4 @@
-// import type { TCard } from "../@types/TCard";
+import type { TCard } from "../types/TCard";
 
 class Card {
   public static SUIT: TCard["suit"][] = ["H", "D", "C", "S"];

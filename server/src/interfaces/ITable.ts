@@ -1,4 +1,6 @@
 import IPlayer from "./IPlayer";
+import type { TGameType } from "../types/TGameType";
+import type { TDeck } from "../types/TDeck";
 
 export default interface ITable {
   gameType: TGameType;

@@ -7,6 +7,12 @@ import House from "./House";
 import IPlayer from "../interfaces/IPlayer";
 import ITable from "../interfaces/ITable";
 import Table from "./Table";
+
+// types
+import type { TCard } from "../types/TCard";
+import type { TPlayerStatus } from "../types/TPlayerStatus";
+import type { TDeck } from "../types/TDeck";
+
 export default class BuilderForBlackjack {
   constructor() {}
 

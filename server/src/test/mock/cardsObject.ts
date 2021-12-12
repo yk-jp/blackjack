@@ -1,3 +1,6 @@
+// types
+import type { TCard } from "../../types/TCard";
+
 const cardsObject: TCard[] = [
   {
     suit: "H",

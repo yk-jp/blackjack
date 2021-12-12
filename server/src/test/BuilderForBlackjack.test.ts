@@ -6,6 +6,8 @@ import BuilderForBlackjack from "../class/BuilderForBlackjack";
 // mock object
 import cardsObject from "./mock/cardsObject";
 import deckObject from "./mock/deckObject";
+// types
+import type { TCard } from "../types/TCard";
 
 describe("Test card class for converting json to class object.", () => {
   describe("convert json card object to card class by using helper method", () => {

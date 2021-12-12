@@ -1,5 +1,7 @@
 import Player from "./Player";
 import GameDecision from "./GameDecision";
+// types
+import type { TPlayerStatus } from "../types/TPlayerStatus";
 
 /* House class
     bet : -1
@@ -37,7 +39,7 @@ class House extends Player {
 
   public prompt(): GameDecision | void {
     if (this.status === "waiting") return new GameDecision("playing");
-    else if (this.status  ==="playing") {
+    else if (this.status === "playing") {
       let promptAction: null | string = null;
       let handScore = this.getHandScore();
       if (handScore < 17) promptAction = "hit";
