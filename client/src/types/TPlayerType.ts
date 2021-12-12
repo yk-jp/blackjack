@@ -1,0 +1,1 @@
+export type TPlayerType = 'user' | 'ai' | 'house';
